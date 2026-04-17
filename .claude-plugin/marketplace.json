@@ -1,0 +1,22 @@
+{
+  "name": "create-claude-plugin",
+  "metadata": {
+    "description": "Single-plugin marketplace for the create-claude-plugin meta-skill."
+  },
+  "owner": {
+    "name": "Cody Hergenroeder",
+    "email": "chergenroeder135@gmail.com"
+  },
+  "plugins": [
+    {
+      "name": "create-claude-plugin",
+      "description": "End-to-end skill for creating a Claude Code plugin: scaffold, build, test, host, and submit to the official Anthropic marketplace.",
+      "version": "0.1.0",
+      "source": "./",
+      "author": {
+        "name": "Cody Hergenroeder",
+        "email": "chergenroeder135@gmail.com"
+      }
+    }
+  ]
+}

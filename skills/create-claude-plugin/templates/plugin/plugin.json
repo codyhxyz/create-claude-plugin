@@ -1,0 +1,16 @@
+{
+  "name": "PLUGIN_NAME",
+  "description": "ONE_SENTENCE_DESCRIPTION_OF_WHAT_THIS_PLUGIN_DOES",
+  "version": "0.1.0",
+  "author": {
+    "name": "YOUR_NAME",
+    "email": "YOUR_EMAIL"
+  },
+  "homepage": "https://github.com/YOUR_GH_USER/PLUGIN_NAME",
+  "repository": "https://github.com/YOUR_GH_USER/PLUGIN_NAME",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "REPLACE_WITH_RELEVANT_KEYWORDS"
+  ]
+}

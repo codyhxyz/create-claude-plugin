@@ -1,0 +1,22 @@
+{
+  "name": "create-claude-plugin",
+  "description": "End-to-end skill for creating a Claude Code plugin: scaffold, build, test, host, and submit to the official Anthropic marketplace.",
+  "version": "0.1.0",
+  "author": {
+    "name": "Cody Hergenroeder",
+    "email": "chergenroeder135@gmail.com"
+  },
+  "homepage": "https://github.com/ydoc5212/create-claude-plugin",
+  "repository": "https://github.com/ydoc5212/create-claude-plugin",
+  "license": "MIT",
+  "keywords": [
+    "claude-code",
+    "plugin",
+    "marketplace",
+    "scaffold",
+    "skill",
+    "agent",
+    "developer-tools",
+    "meta"
+  ]
+}
