@@ -6,7 +6,7 @@ The other plugin guides tell you what plugins *are*. This one walks you all the 
 
 ## What you get
 
-- A **skill** (`/create-claude-plugin:create-claude-plugin`) that orchestrates the full creation process — installable via `/plugin marketplace add ydoc5212/create-claude-plugin`
+- A **skill** (`/create-claude-plugin:create-claude-plugin`) that orchestrates the full creation process — installable via `/plugin marketplace add codyhxyz/create-claude-plugin`
 - **Reference docs** for the `plugin.json` schema, `marketplace.json` schema, every component type (skills, agents, hooks, MCP, LSP, monitors, settings), hosting options, and the submission form
 - **Templates** for `plugin.json`, `marketplace.json`, README, LICENSE, CHANGELOG, plus skill/agent/hook starters
 - A **`check-submission.sh`** script that extracts every submission-form field from your plugin and prints them paste-ready
@@ -16,14 +16,14 @@ The other plugin guides tell you what plugins *are*. This one walks you all the 
 
 Plugin creation is mostly *judgment* — naming, scoping, picking components, writing a description that's actually a good description. The Claude CLI already handles validation (`claude plugin validate`). What was missing: a guide that closes the loop from "what is this thing" → "it's live in `claude-plugins-official`."
 
-Like [chrome-extension-factory](https://github.com/ydoc5212/chrome-extension-factory), this leans on **scripts where determinism matters and the model where judgment matters.** The script catches missing fields. The skill helps you decide what those fields should *say*.
+Like [chrome-extension-factory](https://github.com/codyhxyz/chrome-extension-factory), this leans on **scripts where determinism matters and the model where judgment matters.** The script catches missing fields. The skill helps you decide what those fields should *say*.
 
 ## Installation
 
 ### Claude Code (recommended)
 
 ```
-/plugin marketplace add ydoc5212/create-claude-plugin
+/plugin marketplace add codyhxyz/create-claude-plugin
 /plugin install create-claude-plugin@create-claude-plugin
 ```
 
@@ -31,7 +31,7 @@ Like [chrome-extension-factory](https://github.com/ydoc5212/chrome-extension-fac
 
 ```bash
 mkdir -p ~/.claude/skills/create-claude-plugin
-git clone https://github.com/ydoc5212/create-claude-plugin /tmp/ccp
+git clone https://github.com/codyhxyz/create-claude-plugin /tmp/ccp
 cp -r /tmp/ccp/skills/create-claude-plugin/* ~/.claude/skills/create-claude-plugin/
 ```
 
