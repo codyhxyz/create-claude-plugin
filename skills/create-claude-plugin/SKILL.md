@@ -125,7 +125,11 @@ For each component type's full reference: `reference/component-types.md`.
 
 ## Phase 4: Test locally
 
-Test before pushing. The `--plugin-dir` flag loads a plugin without installing it — local copy takes precedence over installed versions for that session.
+Test on **every surface you plan to claim support for** in the submission form. Plugins target two surfaces today: **Claude Code** (CLI, fully scriptable) and **Claude Cowork** (desktop app, manual UI install only — no `--plugin-dir` equivalent).
+
+### 4a — Claude Code (automated)
+
+The `--plugin-dir` flag loads a plugin without installing it. The local copy takes precedence over installed versions for that session.
 
 ```bash
 claude --plugin-dir ./my-plugin
@@ -152,6 +156,29 @@ If anything fails: read the error, fix it, re-run. Common issues:
 - Skill frontmatter missing `description` → add it
 
 For full debugging recipes: `reference/component-types.md` § Troubleshooting.
+
+### 4b — Claude Cowork (manual)
+
+Cowork has no CLI. To test:
+
+1. Open the Claude desktop app (macOS or Windows)
+2. Go to the **Cowork** tab
+3. **Customize** → **Browse plugins**
+4. Either install from the marketplace (if already published) OR **upload a `.zip`** of your plugin directory
+5. Smoke-test the skill / agent / hook by triggering it in a real Cowork session
+
+**What's likely portable** (per Anthropic's plugin docs — Cowork shares the SKILL.md format and marketplace with Code):
+- Skills (`skills/<name>/SKILL.md`) ✓
+- Agents (`agents/*.md`) ✓
+- MCP servers (Cowork integrates external apps via MCP) — likely ✓ but verify
+
+**What's likely Code-only** (not yet documented as Cowork-supported):
+- Hooks — Cowork's event model may differ
+- LSP servers — Code's code-intelligence surface
+- Monitors — interactive CLI sessions
+- `bin/` — modifies the Bash tool's PATH
+
+**Don't claim Cowork support on the submission form unless you've actually tested it.** The pre-flight script (`check-submission.sh`) blocks the Cowork checkbox in the Platforms output unless you set `COWORK_TESTED=yes` to confirm you've done the manual test.
 
 ---
 

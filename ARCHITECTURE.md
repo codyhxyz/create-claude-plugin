@@ -101,6 +101,22 @@ If we add scripts later (e.g., `release.sh` to bump version + tag + create relea
 
 ---
 
+---
+
+## Cross-surface testing — Claude Code vs Cowork
+
+Plugins target two surfaces:
+- **Claude Code** — CLI, scriptable. `claude plugin validate`, `claude --plugin-dir`, headless `-p` mode all available.
+- **Claude Cowork** — desktop app (macOS/Windows). **No CLI. No `--plugin-dir`. No scriptable install.** Plugin install is `Cowork tab → Customize → Browse plugins → Install` (or upload a `.zip`).
+
+The pipeline automates Code testing fully (`claude plugin validate` in `check-submission.sh`) and adds a portability heuristic that flags Code-only features (`hooks/`, `.lsp.json`, `monitors/`, `bin/`, `settings.json`) so the human knows what to manually verify in Cowork.
+
+For Cowork itself: gated on `COWORK_TESTED=yes` env var. The script refuses to add "Claude Cowork" to the suggested Platforms output unless the human signed off that they actually tested it. This is the same shape as Anthropic's own honor-system Platforms field — but at least the script forces the choice to be deliberate.
+
+**Future work — Computer Use for Cowork:** Anthropic's [Computer Use API](https://www.anthropic.com/news/3-5-models-and-computer-use) could theoretically drive the Cowork desktop app to install + smoke-test a plugin (open the app, navigate Customize → Browse plugins, upload the .zip, run a test prompt, capture the response). This would close the loop on cross-surface automation. Out of scope for v0.1 — needs OS-level UI orchestration, an Anthropic API key, and Cowork actually running. Worth revisiting if Anthropic ships a Cowork CLI, or if Computer Use becomes a routine part of CI.
+
+---
+
 ## Anti-goals
 
 - **Don't ship a GUI / TUI.** The skill is the interface.

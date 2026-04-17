@@ -26,7 +26,9 @@ The form has no draft-save. If you can't fill in any of these without thinking, 
 
 ## Page 3 — Submission details
 
-- [ ] **Platforms** — only checked surfaces I've actually tested
+- [ ] **Platforms** — only checked surfaces I've actually tested:
+  - [ ] **Claude Code** — `claude --plugin-dir ./` + `claude plugin validate .` both pass; tried each skill / agent in a session
+  - [ ] **Claude Cowork** — installed via Claude desktop app → Cowork → Customize → Browse plugins (or .zip upload); smoke-tested in a real Cowork session. If not done, **leave Cowork unchecked.**
 - [ ] **License type** — matches my `LICENSE` file (`MIT`, `Apache-2.0`, etc.)
 - [ ] **Privacy policy URL** — if my plugin sends user data anywhere external, this is filled. Otherwise N/A.
 - [ ] **Submitter email** — current and monitored

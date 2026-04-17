@@ -118,9 +118,9 @@ if [[ -f "$README" ]]; then
   fi
 fi
 
-# ---------- Validation ----------
+# ---------- Validation (Claude Code) ----------
 if command -v claude >/dev/null 2>&1; then
-  echo "claude plugin validate:"
+  echo "claude plugin validate (Claude Code):"
   if (cd "$PLUGIN_DIR" && claude plugin validate . >/dev/null 2>&1); then
     ok "passes"
   else
@@ -128,6 +128,53 @@ if command -v claude >/dev/null 2>&1; then
   fi
 else
   warn "'claude' CLI not found in PATH; skipping 'claude plugin validate'"
+fi
+
+# ---------- Cross-surface portability ----------
+# Claude Code and Claude Cowork share the same plugin format and marketplace,
+# but Cowork has no CLI/--plugin-dir — install + test is manual via the
+# desktop app UI. We can't automate Cowork; we CAN flag features that are
+# known Code-only (or unverified on Cowork) so the human knows what to test
+# manually before claiming Cowork support on the submission form.
+echo "Cross-surface portability:"
+PORTABILITY_FLAGS=()
+[[ -d "$PLUGIN_DIR/skills"  ]] && ok "skills/   — portable (Code + Cowork)"
+[[ -d "$PLUGIN_DIR/agents"  ]] && ok "agents/   — portable (Code + Cowork)"
+if [[ -d "$PLUGIN_DIR/hooks" || -f "$PLUGIN_DIR/hooks/hooks.json" ]]; then
+  warn "hooks/    — Cowork support unverified; Code event model may not match. TEST IN COWORK before claiming support."
+  PORTABILITY_FLAGS+=("hooks")
+fi
+if [[ -f "$PLUGIN_DIR/.mcp.json" ]]; then
+  ok ".mcp.json — likely portable (Cowork integrates external apps via MCP), but TEST."
+fi
+if [[ -f "$PLUGIN_DIR/.lsp.json" ]]; then
+  warn ".lsp.json — Claude Code only (LSP is Code's code-intelligence surface). Don't claim Cowork support."
+  PORTABILITY_FLAGS+=("lsp")
+fi
+if [[ -d "$PLUGIN_DIR/monitors" || -f "$PLUGIN_DIR/monitors/monitors.json" ]]; then
+  warn "monitors/ — Claude Code only (interactive CLI sessions). Don't claim Cowork support."
+  PORTABILITY_FLAGS+=("monitors")
+fi
+if [[ -d "$PLUGIN_DIR/bin" ]]; then
+  warn "bin/      — Claude Code only (modifies the Bash tool's PATH). Don't claim Cowork support."
+  PORTABILITY_FLAGS+=("bin")
+fi
+if [[ -f "$PLUGIN_DIR/settings.json" ]]; then
+  warn "settings.json — likely Code only (only 'agent' + 'subagentStatusLine' keys honored). Verify before claiming Cowork."
+fi
+if [[ ${#PORTABILITY_FLAGS[@]} -eq 0 ]]; then
+  ok "no Code-only features detected — plugin should be portable to Cowork (still requires manual install + test)"
+fi
+
+# ---------- Cowork manual confirmation ----------
+# Cowork has no CLI. Force the human to confirm they've actually tested it
+# before claiming Cowork as a supported platform on the submission form.
+echo "Cowork manual test:"
+echo "  Cowork install: open the Claude desktop app → Cowork tab → Customize → Browse plugins → Install (or upload .zip)"
+if [[ "${COWORK_TESTED:-}" == "yes" ]]; then
+  ok "COWORK_TESTED=yes — you've confirmed manual install + smoke test passed"
+else
+  warn "Cowork install + smoke test NOT confirmed. Set COWORK_TESTED=yes after testing manually, or DO NOT select Cowork in Platforms."
 fi
 
 # ---------- Summary ----------
@@ -158,7 +205,7 @@ Example use cases:
 $(echo "$EXAMPLES_BLOCK" | sed 's/^/  /')
 
 [Page 3 — Submission details]
-Platforms:            <select the surfaces you've tested on>
+Platforms:            Claude Code$( [[ "${COWORK_TESTED:-}" == "yes" ]] && echo ", Claude Cowork" )    # only what you've actually tested
 License type:         ${LICENSE_ID:-<your license>}
 Privacy policy URL:   <fill in IF your plugin transmits user data; else N/A>
 Submitter email:      ${AUTHOR_EMAIL:-<your contact email>}

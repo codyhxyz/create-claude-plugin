@@ -59,14 +59,21 @@ Good: `Example 1: "Review this auth module for security issues" — the plugin w
 
 | Field | Required | Source | Notes |
 |---|---|---|---|
-| **Platforms** | yes | (your testing) | Multi-select. Test on each before claiming support. |
+| **Platforms** | yes | (your testing) | Multi-select. Known options: **Claude Code** (CLI) and **Claude Cowork** (desktop app). Possibly more — exact options aren't documented; check the form. |
 | **License type** | no | `LICENSE` file / `plugin.json` → `license` | `MIT`, `Apache-2.0`, `proprietary`, etc. |
 | **Privacy policy URL** | conditional | (you) | Required if your plugin collects/transmits user data. Skip if not applicable. |
 | **Submitter email** | yes | (your contact) | Anthropic uses this for review communications |
 
 **Privacy policy:** If your plugin includes hooks/MCP/monitors that send user data anywhere external (analytics, telemetry, your own server), you need a privacy policy. Pure-skill plugins with no network calls don't.
 
-**Platforms:** As of the form's current state, surfaces include Claude Code (CLI) and likely IDE integrations. **Don't claim a platform you haven't actually tested on.** Anthropic's review may verify.
+**Platforms — Claude Code vs Claude Cowork:** Both share the same plugin format (`.claude-plugin/plugin.json`, `skills/<name>/SKILL.md`, etc.) and the same official marketplace. The difference is the install/test surface:
+
+| Surface | Install | Automated test? | What's known to work |
+|---|---|---|---|
+| **Claude Code** | `/plugin install <name>@<marketplace>` or `claude --plugin-dir <path>` for local | Yes — `claude plugin validate`, `--plugin-dir` smoke test | All component types |
+| **Claude Cowork** | Desktop app → Cowork tab → Customize → Browse plugins → Install or upload `.zip` | **No CLI; manual UI only** | Skills + agents documented; hooks/LSP/monitors/`bin/` likely Code-only |
+
+**Don't claim Cowork in Platforms unless you've actually opened the desktop app and verified your plugin works there.** The pre-flight script (`check-submission.sh`) only adds Cowork to the suggested Platforms output when you set `COWORK_TESTED=yes` — that env var is the human's signed statement that they did the manual test.
 
 ## Review process
 
