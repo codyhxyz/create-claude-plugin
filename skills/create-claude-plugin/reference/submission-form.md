@@ -16,6 +16,16 @@ Run the pre-flight script. It extracts every field from your plugin's `plugin.js
 
 If anything is missing or malformed, fix it before opening the form. The form has no draft-save — you don't want to be hunting for fields mid-submission.
 
+## Automated handoff (macOS)
+
+After a clean pre-flight (0 errors), `check-submission.sh` automatically:
+- copies the Examples block + all paste-ready fields (grouped by form page) to the clipboard via `pbcopy`,
+- opens `https://claude.ai/settings/plugins/submit` in the default browser via `open`.
+
+So the scripted Phase 7 flow is: **run script → browser opens → confirm → paste-tab through the form**. Executing models should drive the confirmation with the Claude Code `AskUserQuestion` tool (single yes/no), not free-text "say go" prompts — see SKILL.md § "Phase 7 handoff" for the exact wording and options.
+
+Pass `--no-open` (or set `CCP_NO_OPEN=1`) to skip the clipboard + browser step for CI / non-interactive use. If `pbcopy` or `open` are missing, the script warns and continues — it never hard-fails on the handoff.
+
 ## Form fields by page
 
 ### Page 1 — Account / submitter

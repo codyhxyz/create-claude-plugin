@@ -1,28 +1,38 @@
 #!/usr/bin/env bash
 # check-submission.sh — pre-flight a Claude Code plugin for the official store
 #
-# Usage:  ./check-submission.sh <plugin-dir> [--offline]
+# Usage:  ./check-submission.sh <plugin-dir> [--offline] [--no-open] [--print-cowork-prompt]
 #
 # Reads <plugin-dir>/.claude-plugin/plugin.json + README, verifies every
 # field the submission form requires is present + well-formed, and prints
 # them ready to paste into https://claude.ai/settings/plugins/submit.
+#
+# After a clean pre-flight (0 errors), on macOS this script also:
+#   - copies the Examples block to the clipboard via pbcopy
+#   - opens the submission form in the browser via `open`
+# Pass --no-open (or set CCP_NO_OPEN=1) to skip the clipboard + browser step
+# for CI / non-interactive use.
 
 set -euo pipefail
+
+SUBMIT_URL="https://claude.ai/settings/plugins/submit"
 
 PLUGIN_DIR=""
 OFFLINE=""
 PRINT_COWORK_PROMPT=""
+NO_OPEN="${CCP_NO_OPEN:-}"
 for arg in "$@"; do
   case "$arg" in
     --offline)              OFFLINE="--offline" ;;
     --print-cowork-prompt)  PRINT_COWORK_PROMPT="yes" ;;
-    --help|-h)              echo "Usage: $0 <plugin-dir> [--offline] [--print-cowork-prompt]"; exit 0 ;;
+    --no-open)              NO_OPEN="1" ;;
+    --help|-h)              echo "Usage: $0 <plugin-dir> [--offline] [--no-open] [--print-cowork-prompt]"; exit 0 ;;
     *)                      [[ -z "$PLUGIN_DIR" ]] && PLUGIN_DIR="$arg" ;;
   esac
 done
 
 if [[ -z "$PLUGIN_DIR" ]]; then
-  echo "Usage: $0 <plugin-dir> [--offline] [--print-cowork-prompt]" >&2
+  echo "Usage: $0 <plugin-dir> [--offline] [--no-open] [--print-cowork-prompt]" >&2
   exit 2
 fi
 if [[ ! -d "$PLUGIN_DIR" ]]; then
@@ -225,6 +235,69 @@ EOF
 
 if [[ "$WARNINGS" -gt 0 ]]; then
   echo "Note: $WARNINGS warning(s) above. Review before submitting." >&2
+fi
+
+# ---------- Automated handoff: stage clipboard + open submission form ----------
+# Only runs after 0 errors (we already exited above if ERRORS>0). Goal: take the
+# human out of the "copy-paste the fields and navigate to the URL" loop. We
+# stage the Examples block (the longest, most annoying field) on the clipboard
+# and open the submission form tab. If either tool is missing, we warn and keep
+# going — this block is plumbing, not judgment.
+PLATFORMS_LINE="Claude Code"
+[[ "${COWORK_TESTED:-}" == "yes" ]] && PLATFORMS_LINE="Claude Code, Claude Cowork"
+
+CLIPBOARD_PAYLOAD=$(cat <<EOF
+# Paste-ready submission fields for: $NAME
+# Form: $SUBMIT_URL
+# The Examples block below is the big one. Other fields are short — copy from
+# your terminal or re-run: ./scripts/check-submission.sh "$PLUGIN_DIR" --no-open
+
+=== Page 2: Example use cases ===
+$EXAMPLES_BLOCK
+
+=== Page 2: Other fields ===
+Plugin link:        $REPOSITORY
+Plugin homepage:    ${HOMEPAGE:-}
+Plugin name:        $NAME
+Plugin description: $DESCRIPTION
+
+=== Page 3: Submission details ===
+Platforms:          $PLATFORMS_LINE
+License type:       ${LICENSE_ID:-}
+Submitter email:    ${AUTHOR_EMAIL:-}
+EOF
+)
+
+if [[ -z "$NO_OPEN" && "$OSTYPE" == "darwin"* ]]; then
+  echo
+  echo "==> Automated handoff (macOS)"
+
+  if command -v pbcopy >/dev/null 2>&1; then
+    printf '%s' "$CLIPBOARD_PAYLOAD" | pbcopy
+    ok "Clipboard staged: Examples block + all paste-ready fields"
+  else
+    warn "pbcopy not found — skipping clipboard staging"
+  fi
+
+  if command -v open >/dev/null 2>&1; then
+    open "$SUBMIT_URL" >/dev/null 2>&1 && ok "Opened $SUBMIT_URL" \
+      || warn "open failed — navigate to $SUBMIT_URL manually"
+  else
+    warn "open not found — navigate to $SUBMIT_URL manually"
+  fi
+
+  cat <<EOF
+
+Next step:
+  - Browser tab is open at the submission form.
+  - Clipboard has the Examples block + other fields labeled by form page.
+  - To re-stage clipboard later, run:
+      ./scripts/check-submission.sh "$PLUGIN_DIR" --no-open | pbcopy
+  - To skip this handoff (CI / non-interactive), pass --no-open.
+EOF
+elif [[ -z "$NO_OPEN" && "$OSTYPE" != "darwin"* ]]; then
+  echo
+  echo "Automated handoff skipped: non-macOS (\$OSTYPE=$OSTYPE). Open $SUBMIT_URL manually."
 fi
 
 # ---------- Optional: paste-ready Cowork test prompt for Claude Code Computer Use ----------
