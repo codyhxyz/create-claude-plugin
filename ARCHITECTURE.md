@@ -113,7 +113,13 @@ The pipeline automates Code testing fully (`claude plugin validate` in `check-su
 
 For Cowork itself: gated on `COWORK_TESTED=yes` env var. The script refuses to add "Claude Cowork" to the suggested Platforms output unless the human signed off that they actually tested it. This is the same shape as Anthropic's own honor-system Platforms field — but at least the script forces the choice to be deliberate.
 
-**Future work — Computer Use for Cowork:** Anthropic's [Computer Use API](https://www.anthropic.com/news/3-5-models-and-computer-use) could theoretically drive the Cowork desktop app to install + smoke-test a plugin (open the app, navigate Customize → Browse plugins, upload the .zip, run a test prompt, capture the response). This would close the loop on cross-surface automation. Out of scope for v0.1 — needs OS-level UI orchestration, an Anthropic API key, and Cowork actually running. Worth revisiting if Anthropic ships a Cowork CLI, or if Computer Use becomes a routine part of CI.
+**Computer Use for Cowork — available today (with caveats):** Claude Code ships a built-in `computer-use` MCP server (enable via `/mcp`) on macOS for Pro/Max plans, v2.1.85+, in interactive sessions only. With it enabled, Claude Code can open the Cowork desktop app, navigate Customize → Browse plugins, upload a .zip, run a smoke prompt, and screenshot the result — without leaving the terminal session.
+
+What this means for the pipeline:
+- We **cannot** make `check-submission.sh` drive Cowork end-to-end, because computer-use is interactive-only (no `-p` flag).
+- We **can** have the script generate a paste-ready prompt that the user runs in an interactive Claude Code session to perform the Cowork test. The script then trusts a follow-up `COWORK_TESTED=yes` env var as the human's signed confirmation.
+
+This is the v0.3.0 pattern: hand-off to Claude Code's own computer-use rather than re-implementing UI automation. If Anthropic ships a Cowork CLI or non-interactive computer-use mode, we fully automate the loop. Until then, the orchestrator is Claude Code and the human is the trigger.
 
 ---
 

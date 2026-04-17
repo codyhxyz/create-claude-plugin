@@ -9,11 +9,20 @@
 
 set -euo pipefail
 
-PLUGIN_DIR="${1:-}"
-OFFLINE="${2:-}"
+PLUGIN_DIR=""
+OFFLINE=""
+PRINT_COWORK_PROMPT=""
+for arg in "$@"; do
+  case "$arg" in
+    --offline)              OFFLINE="--offline" ;;
+    --print-cowork-prompt)  PRINT_COWORK_PROMPT="yes" ;;
+    --help|-h)              echo "Usage: $0 <plugin-dir> [--offline] [--print-cowork-prompt]"; exit 0 ;;
+    *)                      [[ -z "$PLUGIN_DIR" ]] && PLUGIN_DIR="$arg" ;;
+  esac
+done
 
 if [[ -z "$PLUGIN_DIR" ]]; then
-  echo "Usage: $0 <plugin-dir> [--offline]" >&2
+  echo "Usage: $0 <plugin-dir> [--offline] [--print-cowork-prompt]" >&2
   exit 2
 fi
 if [[ ! -d "$PLUGIN_DIR" ]]; then
@@ -170,11 +179,12 @@ fi
 # Cowork has no CLI. Force the human to confirm they've actually tested it
 # before claiming Cowork as a supported platform on the submission form.
 echo "Cowork manual test:"
-echo "  Cowork install: open the Claude desktop app → Cowork tab → Customize → Browse plugins → Install (or upload .zip)"
+echo "  Path A (manual):     Claude desktop → Cowork tab → Customize → Browse plugins → Install / .zip upload"
+echo "  Path B (macOS Pro+): in interactive Claude Code, /mcp → enable 'computer-use', then re-run this script with --print-cowork-prompt to get a paste-ready prompt that drives the test"
 if [[ "${COWORK_TESTED:-}" == "yes" ]]; then
   ok "COWORK_TESTED=yes — you've confirmed manual install + smoke test passed"
 else
-  warn "Cowork install + smoke test NOT confirmed. Set COWORK_TESTED=yes after testing manually, or DO NOT select Cowork in Platforms."
+  warn "Cowork install + smoke test NOT confirmed. Set COWORK_TESTED=yes after testing (manually or via Path B), or DO NOT select Cowork in Platforms."
 fi
 
 # ---------- Summary ----------
@@ -215,4 +225,37 @@ EOF
 
 if [[ "$WARNINGS" -gt 0 ]]; then
   echo "Note: $WARNINGS warning(s) above. Review before submitting." >&2
+fi
+
+# ---------- Optional: paste-ready Cowork test prompt for Claude Code Computer Use ----------
+if [[ "$PRINT_COWORK_PROMPT" == "yes" ]]; then
+  # Pick a test prompt: prefer the first ">" quoted line in README's Usage section, else fallback
+  TEST_PROMPT=$(awk '/^## +Usage/{flag=1; next} flag && /^## /{exit} flag' "$README" 2>/dev/null \
+    | awk '/^> +"/ {sub(/^> +"/,""); sub(/"[[:space:]]*$/,""); print; exit}' )
+  [[ -z "$TEST_PROMPT" ]] && TEST_PROMPT="(invoke the plugin's main skill with a realistic input)"
+
+  ABS_PLUGIN_DIR=$(cd "$PLUGIN_DIR" && pwd)
+  cat <<EOF
+
+================================================================
+COWORK TEST PROMPT — paste into an INTERACTIVE Claude Code session
+(prereqs: macOS, Pro/Max, Claude Code ≥ v2.1.85, /mcp → enable
+'computer-use', then grant macOS Accessibility + Screen Recording)
+================================================================
+
+Open the Claude desktop app and switch to the Cowork tab. Click
+Customize → Browse plugins. If "${NAME}" appears in the marketplace,
+install it from there; otherwise zip the directory at
+'${ABS_PLUGIN_DIR}' and upload the .zip via the same UI.
+
+Once installed, start a Cowork session and run this test prompt:
+
+  ${TEST_PROMPT}
+
+Verify the plugin's main skill responds as described in its README.
+Screenshot any errors. Report whether the smoke test passed.
+
+If it passed, I will run: export COWORK_TESTED=yes
+================================================================
+EOF
 fi

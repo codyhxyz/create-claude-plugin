@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] — 2026-04-16
+
+### Added
+- **`--print-cowork-prompt` flag** for `check-submission.sh`. Generates a paste-ready prompt for an interactive Claude Code session (with the built-in `computer-use` MCP server enabled) that drives the entire Cowork install + smoke test on the user's behalf. Pulls a realistic test prompt from the plugin's README Usage section.
+- SKILL.md Phase 4b now offers two paths: **Path A (manual)** for any platform, **Path B (semi-automated)** via Claude Code Computer Use on macOS + Pro/Max + v2.1.85+ + interactive session.
+
+### Changed
+- ARCHITECTURE.md: Computer Use for Cowork is no longer "future work" — it's available today via Claude Code's built-in `computer-use` MCP server (enable in `/mcp`). The honest gap is that it's interactive-only (no `-p` flag), so the script generates the prompt rather than running it directly.
+- `check-submission.sh` Cowork section now describes both paths.
+
 ## [0.2.0] — 2026-04-16
 
 ### Added
