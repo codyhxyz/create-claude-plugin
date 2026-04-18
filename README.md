@@ -8,7 +8,7 @@
 
 <p align="center"><img src="assets/og.png" alt="create-claude-plugin" width="760"></p>
 
-> *A Claude plugin that helps you ship Claude plugins — scaffold, test, publish, and submit to the official Anthropic marketplace in one session.*
+> *A Claude plugin that ships Claude plugins: The build-and-publish layer for the era of bespoke AI.*
 
 Yes, it's recursive. Someone had to do it.
 
