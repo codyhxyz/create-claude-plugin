@@ -17,15 +17,24 @@ What this skill does in 1–2 sentences. State the core principle.
 
 **When NOT to use:** Specific cases where another approach fits better.
 
-## The N Phases
+## Workflow
 
-Run them in order. Each phase's output feeds the next.
+<!--
+  Shape this section to match the skill's nature:
+    - Phased orchestration skills  → "### Phase 1 — NAME" / "### Phase 2 — NAME" ...
+    - Linear procedures            → numbered steps
+    - Formatters / validators /    → freeform sections ("Rules", "Checks", "Output format")
+      style skills                   — no phases or steps needed
+  Delete the scaffolding below that doesn't fit and replace with what does.
+-->
 
-### Phase 1 — NAME
+Describe how the skill actually runs. If it has ordered stages, list them. If it's a set of rules applied in any order, list the rules. If it's a single checked transformation, just say so.
+
+### Section 1 — NAME
 
 What to do. What to produce.
 
-### Phase 2 — NAME
+### Section 2 — NAME
 
 What to do. What to produce.
 

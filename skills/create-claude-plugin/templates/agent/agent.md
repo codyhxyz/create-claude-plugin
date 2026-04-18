@@ -1,6 +1,16 @@
 ---
 name: AGENT_NAME
-description: Use this agent when [SPECIFIC_TRIGGERS]. This agent should be invoked when:\n\n<example>\nContext: [SCENARIO]\nuser: "[EXAMPLE USER MESSAGE]"\nassistant: "[ASSISTANT_DELEGATION_LINE]"\n<commentary>\n[WHY THIS AGENT IS THE RIGHT CHOICE HERE]\n</commentary>\n</example>
+description: |
+  Use this agent when [SPECIFIC_TRIGGERS]. This agent should be invoked when:
+
+  <example>
+  Context: [SCENARIO]
+  user: "[EXAMPLE USER MESSAGE]"
+  assistant: "[ASSISTANT_DELEGATION_LINE]"
+  <commentary>
+  [WHY THIS AGENT IS THE RIGHT CHOICE HERE]
+  </commentary>
+  </example>
 model: inherit
 ---
 
