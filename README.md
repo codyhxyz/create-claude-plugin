@@ -1,5 +1,11 @@
 # create-claude-plugin
 
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
+  <a href=".claude-plugin/plugin.json"><img src="https://img.shields.io/github/package-json/v/codyhxyz/create-claude-plugin?filename=.claude-plugin%2Fplugin.json&label=version" alt="Version"></a>
+  <a href="https://claude.com/product/claude-code"><img src="https://img.shields.io/badge/built_for-Claude%20Code-d97706" alt="Built for Claude Code"></a>
+</p>
+
 <p align="center"><img src="assets/og.png" alt="create-claude-plugin" width="760"></p>
 
 > *A Claude plugin that helps you ship Claude plugins — scaffold, test, publish, and submit to the official Anthropic marketplace in one session.*

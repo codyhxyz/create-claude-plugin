@@ -357,13 +357,13 @@ if [[ -f "$README" ]]; then
 fi
 
 HERO_FOUND=""
-for hero in docs/hero.gif docs/hero.svg docs/hero.webm docs/hero.png; do
+for hero in docs/hero.gif docs/hero.svg docs/hero.webm docs/hero.png assets/og.png; do
   [[ -f "$PLUGIN_DIR/$hero" ]] && HERO_FOUND="$hero" && break
 done
 if [[ -n "$HERO_FOUND" ]]; then
   ok "hero asset present: $HERO_FOUND"
 else
-  warn "no hero asset in docs/ — run scripts/record-demo.sh (VHS → hero.gif) or scripts/generate-wordmark.sh (SVG fallback)"
+  warn "no hero asset — run scripts/record-demo.sh (VHS → docs/hero.gif), scripts/generate-wordmark.sh (SVG fallback), or the og-card skill (assets/og.png)"
 fi
 
 # Remote repo topics — only check if we have a repo URL and gh is installed.
