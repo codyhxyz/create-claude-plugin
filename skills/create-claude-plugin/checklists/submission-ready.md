@@ -6,19 +6,14 @@ The form has no draft-save. If you can't fill in any of these without thinking, 
 
 ## Pre-flight script
 
-- [ ] `./scripts/check-submission.sh /path/to/your/plugin` passes
-- [ ] Output copied for paste into the form
+- [ ] Executing model ran `${CLAUDE_PLUGIN_ROOT}/scripts/check-submission.sh "<plugin-path>"` via its Bash tool, 0 errors
+- [ ] Clipboard staged + submission form tab opened (macOS automated handoff)
 
 ## Page 2 — Plugin links + details
 
 - [ ] **Plugin link** — repo URL is public and live
 - [ ] **Plugin homepage** — optional, but if you set one it loads
-- [ ] **Plugin name** — checked against `claude-plugins-official` and not taken:
-  ```bash
-  curl -s https://raw.githubusercontent.com/anthropics/claude-plugins-official/main/.claude-plugin/marketplace.json \
-    | jq -r '.plugins[].name' | grep -x YOUR_PLUGIN_NAME && echo "TAKEN" || echo "available"
-  ```
-- [ ] **Plugin name** — does not use unowned brand names
+- [ ] **Plugin name** — kebab-case, not reserved/impersonating (see `reference/marketplace-manifest.md`), and not already taken in `claude-plugins-official` (the pre-flight script checks this online)
 - [ ] **Plugin description** — one sentence, leads with the verb, no hype words
 - [ ] **Example use cases** — at least two, each:
   - [ ] Includes a realistic user prompt (not a description of one)

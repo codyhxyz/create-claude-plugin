@@ -6,7 +6,7 @@ Run before pushing to GitHub.
 
 - [ ] `.claude-plugin/plugin.json` exists
 - [ ] `.claude-plugin/marketplace.json` exists (for single-plugin repos)
-- [ ] All component dirs (`skills/`, `agents/`, `hooks/`, etc.) are at the **plugin root**, NOT inside `.claude-plugin/`
+- [ ] Component dirs live at the plugin root, not inside `.claude-plugin/` — see `reference/component-types.md`
 - [ ] `LICENSE` exists
 - [ ] `README.md` exists with install + usage + at least one example
 - [ ] `CHANGELOG.md` exists with a v0.1.0 entry
@@ -14,9 +14,7 @@ Run before pushing to GitHub.
 
 ## Manifest
 
-- [ ] `name` is kebab-case
-- [ ] `name` is not in the reserved list (claude-code-marketplace, claude-plugins-official, etc.)
-- [ ] `name` doesn't impersonate Anthropic brands
+- [ ] `name` is kebab-case and not reserved/impersonating — see `reference/marketplace-manifest.md` § Reserved marketplace names
 - [ ] `description` is one concise sentence
 - [ ] `version` is `0.1.0` (or higher) and follows semver
 - [ ] `author.name`, `author.email` set
@@ -30,8 +28,7 @@ Run before pushing to GitHub.
 - [ ] Each skill has frontmatter `description` starting with "Use when..."
 - [ ] No skill description summarizes the workflow (it's about *when*, not *what*)
 - [ ] Hook scripts are executable (`chmod +x`)
-- [ ] All hook commands use `${CLAUDE_PLUGIN_ROOT}/...` (no absolute paths, no `..` traversal)
-- [ ] All MCP `command`/`args`/`env` paths use `${CLAUDE_PLUGIN_ROOT}` or `${CLAUDE_PLUGIN_DATA}`
+- [ ] All hook / MCP / monitor commands use `${CLAUDE_PLUGIN_ROOT}` (or `${CLAUDE_PLUGIN_DATA}` for persistent state) — see `reference/plugin-manifest.md` § Environment variables
 - [ ] No plugin agent uses `hooks`, `mcpServers`, or `permissionMode` (not supported)
 
 ## Validation

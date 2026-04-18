@@ -6,12 +6,12 @@ Submit at one of:
 
 Once approved, your plugin lands in `anthropics/claude-plugins-official` and is installable as `/plugin install <name>@claude-plugins-official` for everyone.
 
-## Before opening the form
+## Before opening the form (executing model: run this via Bash tool)
 
-Run the pre-flight script. It extracts every field from your plugin's `plugin.json` + `README.md`, verifies they're complete, and prints them in paste-ready format:
+The executing model invokes the pre-flight script directly — the human does not open a terminal. It extracts every field from the plugin's `plugin.json` + `README.md`, verifies they're complete, and prints them in paste-ready format:
 
 ```bash
-./scripts/check-submission.sh /path/to/your/plugin
+${CLAUDE_PLUGIN_ROOT}/scripts/check-submission.sh "<plugin-path>"
 ```
 
 If anything is missing or malformed, fix it before opening the form. The form has no draft-save — you don't want to be hunting for fields mid-submission.
@@ -22,7 +22,7 @@ After a clean pre-flight (0 errors), `check-submission.sh` automatically:
 - copies the Examples block + all paste-ready fields (grouped by form page) to the clipboard via `pbcopy`,
 - opens `https://claude.ai/settings/plugins/submit` in the default browser via `open`.
 
-So the scripted Phase 7 flow is: **run script → browser opens → confirm → paste-tab through the form**. Executing models should drive the confirmation with the Claude Code `AskUserQuestion` tool (single yes/no), not free-text "say go" prompts — see SKILL.md § "Phase 7 handoff" for the exact wording and options.
+So the scripted Phase 7 flow is: **model runs script → browser opens → model asks `AskUserQuestion` → user confirms → paste-tab through the form**. The human watches output and responds to `AskUserQuestion`; they don't shell out. See `reference/phase7-handoff.md` for the exact wording and options.
 
 Pass `--no-open` (or set `CCP_NO_OPEN=1`) to skip the clipboard + browser step for CI / non-interactive use. If `pbcopy` or `open` are missing, the script warns and continues — it never hard-fails on the handoff.
 
@@ -42,9 +42,8 @@ Likely auto-filled from your Anthropic login. (If you encounter additional field
 | **Plugin description** | yes | `plugin.json` → `description` | One concise sentence about what it does |
 | **Example use cases** | yes | README `## Examples` (or `## Example use cases`) section | Format: `Example 1: ...\nExample 2: ...` |
 
-**Name constraints:**
-- Cannot use reserved names (see `marketplace-manifest.md`)
-- Cannot impersonate Anthropic
+**Name constraints** (canonical rules in `reference/marketplace-manifest.md` § Reserved marketplace names):
+- Must be kebab-case, not reserved, not impersonating Anthropic
 - Should be available — check the official marketplace.json for collisions:
   ```bash
   curl -s https://raw.githubusercontent.com/anthropics/claude-plugins-official/main/.claude-plugin/marketplace.json | jq -r '.plugins[].name'

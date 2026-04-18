@@ -18,6 +18,7 @@ A Claude Code plugin is a self-contained directory with a `.claude-plugin/plugin
 - User wants to scaffold a new plugin from scratch
 - User wants to add a marketplace.json so their repo is installable via `/plugin marketplace add`
 - User is ready to submit to `claude-plugins-official`
+- User wants to ship an **update** to an already-published plugin (see Phase 0)
 
 **When NOT to use:**
 - Personal-only customization with no intent to share → use `~/.claude/` directly. Plugins add namespacing overhead (`/my-plugin:hello` instead of `/hello`); skip them for solo work.
@@ -29,13 +30,32 @@ Run them in order. Each phase has a deliverable. Don't skip — phase N's output
 
 | # | Phase | Deliverable |
 |---|---|---|
+| 0 | **Existing plugin?** | If so, skip scaffolding — branch into the update flow |
 | 1 | **Decide** | Plugin or standalone? Which components? |
 | 2 | **Scaffold** | Directory + `plugin.json` + `marketplace.json` + LICENSE + README stub |
 | 3 | **Build** | Skills/agents/hooks/etc. wired in correct locations |
 | 4 | **Test locally** | `claude --plugin-dir <path>` + `/reload-plugins` + `claude plugin validate .` all green |
 | 5 | **Document** | README with install + usage + examples; CHANGELOG with v0.1.0 |
 | 6 | **Host & make installable** | Push to GitHub; verify `/plugin marketplace add owner/repo` works |
-| 7 | **Submit to official store** | Run `check-submission.sh`, paste output into the submission form |
+| 7 | **Submit to official store** | Run `check-submission.sh`, fill the form |
+
+---
+
+## Phase 0: Is this an existing plugin?
+
+If the user already has a `.claude-plugin/plugin.json` in the target directory, **skip Phases 1–3** and run the update flow instead:
+
+1. **Bump `version`** in `.claude-plugin/plugin.json` per semver (patch = fix, minor = new feature, major = breaking). Set in only one place — `plugin.json` always wins over `marketplace.json` silently.
+2. **Add a CHANGELOG entry** at the top of `CHANGELOG.md`: new version heading, today's date (`date +%Y-%m-%d`), summary of changes. Keep the prior entries; don't rewrite history.
+3. **Re-run validation + pre-flight:**
+   ```bash
+   claude plugin validate <plugin-path>
+   ${CLAUDE_PLUGIN_ROOT}/scripts/check-submission.sh "<plugin-path>"
+   ```
+4. **Push the update.** Commit, tag the new version (`git tag v<x.y.z> && git push --tags`), and push. Users running `/plugin install` will pick up the new version on refresh.
+5. **If the plugin is already in `claude-plugins-official`, re-submit.** Anthropic reviews updates separately — the official marketplace doesn't auto-pull new tags. Re-run Phase 7 with the new version.
+
+Updates skip scaffolding + component decisions but still go through Phases 4 (test), 5 (doc), 6 (host), and 7 (submit, if applicable).
 
 ---
 
@@ -69,7 +89,7 @@ Most plugins are one or two of these. **Pick the smallest set that solves the ac
 
 ## Phase 2: Scaffold
 
-Create the directory structure. **Critical mistake to avoid:** all component directories (`skills/`, `agents/`, `hooks/`, etc.) must live at the **plugin root**, not inside `.claude-plugin/`. Only `plugin.json` (and optionally `marketplace.json`) goes in `.claude-plugin/`.
+Create the directory structure. Component dirs (`skills/`, `agents/`, `hooks/`, etc.) live at the **plugin root**, NOT inside `.claude-plugin/` — only `plugin.json` and `marketplace.json` go there. See `reference/component-types.md` for why.
 
 Correct shape:
 
@@ -88,17 +108,13 @@ my-plugin/
 
 Copy from `templates/`:
 - `templates/plugin/plugin.json` → `.claude-plugin/plugin.json` (fill in name, description, author, repo URL)
-- `templates/plugin/marketplace.json` → `.claude-plugin/marketplace.json` (mirrors plugin.json; lets users add the repo as a single-plugin marketplace)
-- `templates/plugin/README.md` → `README.md` (replace placeholders)
+- `templates/plugin/marketplace.json` → `.claude-plugin/marketplace.json`
+- `templates/plugin/README.md` → `README.md`
 - `templates/plugin/LICENSE` → `LICENSE` (MIT; update year + name)
 - `templates/plugin/CHANGELOG.md` → `CHANGELOG.md`
 - `templates/plugin/.gitignore` → `.gitignore`
 
-**Naming rules:**
-- Plugin `name` must be **kebab-case** (lowercase letters, digits, hyphens). Other forms work in Claude Code but the Claude.ai marketplace sync rejects them.
-- Don't use brand names you don't own. Anthropic blocks names like `official-claude-plugins` or `anthropic-tools-v2`.
-- Reserved names (cannot be used): `claude-code-marketplace`, `claude-code-plugins`, `claude-plugins-official`, `anthropic-marketplace`, `anthropic-plugins`, `agent-skills`, `knowledge-work-plugins`, `life-sciences`.
-- Skills are namespaced as `/<plugin-name>:<skill-name>` — pick a plugin name that reads well in that form.
+**Naming:** Name must be kebab-case and not reserved or Anthropic-impersonating. See `reference/marketplace-manifest.md` § "Reserved marketplace names" for the full list. Skills are namespaced `/<plugin-name>:<skill-name>` — pick a name that reads well there.
 
 For full schema details: `reference/plugin-manifest.md` and `reference/marketplace-manifest.md`.
 
@@ -110,14 +126,11 @@ Add components using the templates in `templates/` as starting points:
 
 - **Skill:** `templates/skill/SKILL.md` → `skills/<your-skill-name>/SKILL.md`. Required frontmatter: `description` (when to use, third person, "Use when...", no workflow summary). Optional: `disable-model-invocation: true` if it should only fire on explicit slash command.
 - **Agent:** `templates/agent/agent.md` → `agents/<your-agent-name>.md`. Frontmatter supports `name`, `description`, `model`, `effort`, `maxTurns`, `tools`, `disallowedTools`, `skills`, `memory`, `background`, `isolation`. **Not supported in plugin agents:** `hooks`, `mcpServers`, `permissionMode`.
-- **Hook:** `templates/hook/hooks.json` → `hooks/hooks.json`. Use `${CLAUDE_PLUGIN_ROOT}` to reference scripts inside the plugin (paths get rewritten when installed to the cache).
+- **Hook:** `templates/hook/hooks.json` → `hooks/hooks.json`. Use `${CLAUDE_PLUGIN_ROOT}` to reference scripts inside the plugin.
 - **MCP server:** Inline in `plugin.json` under `mcpServers`, or a `.mcp.json` at the plugin root. Same `${CLAUDE_PLUGIN_ROOT}` rule.
 - **LSP server / Monitor:** See `reference/component-types.md`.
 
-**Critical rules:**
-- Use `${CLAUDE_PLUGIN_ROOT}` in *all* hook commands, MCP `command`/`args`/`env`, monitor `command`. Plugins are copied to a cache (`~/.claude/plugins/cache/`) when installed; absolute paths and `..` traversal **will not work**.
-- For state that should survive plugin updates (node_modules, virtualenvs, caches), use `${CLAUDE_PLUGIN_DATA}` instead.
-- Make hook scripts executable: `chmod +x scripts/your-script.sh`.
+**Use `${CLAUDE_PLUGIN_ROOT}` in all hook / MCP / monitor commands and args** — plugins run from a cache, so absolute paths + `..` don't work. For state that should survive updates, use `${CLAUDE_PLUGIN_DATA}`. Full rules: `reference/plugin-manifest.md` § "Environment variables". Make hook scripts executable (`chmod +x`).
 
 For each component type's full reference: `reference/component-types.md`.
 
@@ -141,68 +154,22 @@ Inside the session:
 - Try invoking each skill: `/<plugin-name>:<skill-name>`
 - After editing files: `/reload-plugins` (no restart needed)
 
-Run validation (catches manifest errors, frontmatter problems, hook config issues):
+Run validation:
 
 ```bash
 claude plugin validate .
-# or, inside Claude Code:
-/plugin validate .
 ```
 
-If anything fails: read the error, fix it, re-run. Common issues:
-- Components inside `.claude-plugin/` instead of at the plugin root → move them up
-- Hook script not executable → `chmod +x`
-- Hook command uses absolute path → switch to `${CLAUDE_PLUGIN_ROOT}/...`
-- Skill frontmatter missing `description` → add it
+Common issues: components inside `.claude-plugin/` (move up to root), hook script not executable (`chmod +x`), hook command uses absolute path (switch to `${CLAUDE_PLUGIN_ROOT}/...`), skill frontmatter missing `description`. For debugging recipes: `reference/component-types.md` § Troubleshooting.
 
-For full debugging recipes: `reference/component-types.md` § Troubleshooting.
+### 4b — Claude Cowork
 
-### 4b — Claude Cowork (manual, OR semi-automated via Claude Code Computer Use)
+Cowork has no CLI. Two paths, both covered in detail in `reference/cowork-testing.md`:
 
-Cowork has no CLI. Two paths:
+- **Path A — manual:** Claude desktop → Cowork tab → Customize → Browse plugins → install or `.zip` upload → smoke-test.
+- **Path B — semi-automated:** Claude Code's `computer-use` MCP drives the desktop app (macOS + Pro/Max only).
 
-**Path A — manual (works on any platform):**
-1. Open the Claude desktop app (macOS or Windows)
-2. Go to the **Cowork** tab
-3. **Customize** → **Browse plugins**
-4. Either install from the marketplace (if already published) OR **upload a `.zip`** of your plugin directory
-5. Smoke-test the skill / agent / hook by triggering it in a real Cowork session
-
-**Path B — semi-automated via Claude Code Computer Use (macOS + Pro/Max only):**
-
-Claude Code ships a built-in `computer-use` MCP server that lets Claude take screenshots and click/type on macOS GUI apps. You can hand off the entire Cowork test to it instead of doing the manual steps yourself.
-
-Prerequisites:
-- macOS
-- Claude Pro or Max plan (not Team/Enterprise)
-- Claude Code v2.1.85 or later (`claude --version`)
-- Claude desktop app installed
-- Interactive Claude Code session (computer-use is unavailable with the `-p` flag)
-
-Steps:
-1. In an interactive Claude Code session, run `/mcp`, find `computer-use`, and **Enable** it
-2. The first time it runs, grant macOS Accessibility + Screen Recording permissions when prompted
-3. Paste this prompt:
-
-   > Open the Claude desktop app and switch to the Cowork tab. Click Customize → Browse plugins → upload (the file at `<absolute-path-to-your-plugin>.zip`). Once installed, run a Cowork session that triggers my plugin's main skill (e.g., the prompt: `<a-realistic-test-prompt-for-your-plugin>`). Screenshot any errors. Report whether the skill responded as expected.
-
-4. Watch Claude Code drive the desktop app. Press `Esc` from anywhere to abort.
-5. If it works: `export COWORK_TESTED=yes` and re-run `check-submission.sh`.
-
-Run `./scripts/check-submission.sh /path/to/plugin --print-cowork-prompt` to get a generated prompt with paths and a sensible test prompt pre-filled.
-
-**What's likely portable** (per Anthropic's plugin docs — Cowork shares the SKILL.md format and marketplace with Code):
-- Skills (`skills/<name>/SKILL.md`) ✓
-- Agents (`agents/*.md`) ✓
-- MCP servers (Cowork integrates external apps via MCP) — likely ✓ but verify
-
-**What's likely Code-only** (not yet documented as Cowork-supported):
-- Hooks — Cowork's event model may differ
-- LSP servers — Code's code-intelligence surface
-- Monitors — interactive CLI sessions
-- `bin/` — modifies the Bash tool's PATH
-
-**Don't claim Cowork support on the submission form unless you've actually tested it.** The pre-flight script (`check-submission.sh`) blocks the Cowork checkbox in the Platforms output unless you set `COWORK_TESTED=yes` to confirm you've done the manual test.
+**Don't claim Cowork support on the submission form unless you've actually tested it.** `check-submission.sh` blocks the Cowork checkbox unless `COWORK_TESTED=yes` is set in the environment.
 
 ---
 
@@ -216,7 +183,9 @@ The README is the primary install/usage doc. Use `templates/plugin/README.md` an
 - **Usage** — at minimum one example invocation per skill/agent
 - **Example interactions** — a real before/after; this is what convinces people the plugin is worth installing
 
-Bump `version` in `plugin.json` (start at `0.1.0`). Add a CHANGELOG entry.
+Bump `version` in `plugin.json` (start at `0.1.0`).
+
+**CHANGELOG:** Add a `v0.1.0` entry. The copied template contains a `YYYY-MM-DD` placeholder — the executing model must replace it with today's date. Use `date +%Y-%m-%d` (or equivalent) and write the result into `CHANGELOG.md`. Don't leave the placeholder in.
 
 **For the submission form**, your README needs an "## Examples" or "## Example use cases" section — `check-submission.sh` looks for it.
 
@@ -224,20 +193,22 @@ Bump `version` in `plugin.json` (start at `0.1.0`). Add a CHANGELOG entry.
 
 ## Phase 6: Host & make installable
 
-Push to GitHub. Anyone can then install with:
+Push to GitHub using the helper script (idempotent — safe to re-run on updates):
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/publish-to-github.sh "<plugin-path>"
+```
+
+The script reads `.claude-plugin/plugin.json` for name, description, and homepage; auto-detects topics from the component layout (`claude-skill` if `skills/` exists, etc.) + manifest `keywords`; creates the repo if it doesn't exist; and always runs `gh repo edit` to sync metadata.
+
+Once pushed, anyone can install with:
 
 ```
 /plugin marketplace add <owner>/<repo>
 /plugin install <plugin-name>@<marketplace-name>
 ```
 
-Where `<marketplace-name>` is the `name` field in your `.claude-plugin/marketplace.json` (which can be the same as your plugin name for a single-plugin repo).
-
-```bash
-gh repo create <owner>/<plugin-name> --public --source=. --remote=origin --push \
-  --description "<plugin description>"
-gh repo edit <owner>/<plugin-name> --add-topic claude-code --add-topic claude-skill
-```
+Where `<marketplace-name>` is the `name` in your `.claude-plugin/marketplace.json`.
 
 Other hosting options (GitLab, Bitbucket, npm, git URL, git-subdir) are documented in `reference/hosting-options.md`.
 
@@ -247,65 +218,21 @@ Other hosting options (GitLab, Bitbucket, npm, git URL, git-subdir) are document
 
 ## Phase 7: Submit to the official store (optional)
 
-The official Anthropic marketplace is `claude-plugins-official`. Once accepted, your plugin is installable as `/plugin install <name>@claude-plugins-official` for everyone.
+The official Anthropic marketplace is `claude-plugins-official`. Once accepted, your plugin is installable as `/plugin install <name>@claude-plugins-official`.
 
-The submission form itself is a human step — Anthropic has no public submission API. But everything **up to** clicking "Submit" should be automated. Follow this handoff exactly; don't improvise.
+The submission form is a human step — no public API. But everything up to clicking "Submit" is automated. **Full protocol in `reference/phase7-handoff.md`** — read it once at the start of Phase 7. Short version:
 
-### Phase 7 handoff (executing model: read this carefully)
-
-1. **Run the pre-flight script.** This is both validation *and* the automated handoff:
-
+1. **Executing model runs the pre-flight via Bash tool** (not the human in a terminal):
    ```bash
-   ./scripts/check-submission.sh /path/to/your/plugin
+   ${CLAUDE_PLUGIN_ROOT}/scripts/check-submission.sh "<plugin-path>"
    ```
+   On macOS with 0 errors, the script stages the clipboard + opens the form tab.
+2. **Confirm with `AskUserQuestion`**, not free text. Single yes/no: *"Ready to submit `<plugin-name>`?"* Options: `Yes — opening form now` / `No — I'll do it later`. Ask once.
+3. **On "Yes", present paste-ready fields grouped by form page** using the script's Page 2 / Page 3 groupings verbatim. Don't reorder.
+4. **Platforms field — never claim Cowork** unless `COWORK_TESTED=yes` was set before running the script.
+5. **After the user submits, stop.** No polling, no timeline.
 
-   On macOS with 0 errors, the script now:
-   - copies a labeled paste-ready block (Examples + all fields, grouped by form page) to the clipboard via `pbcopy`,
-   - opens `https://claude.ai/settings/plugins/submit` in the browser via `open`.
-
-   If errors: fix them and re-run. If warnings: surface them to the user once, then proceed.
-
-2. **Confirm with `AskUserQuestion`, not free text.** Do **not** ask "say go" / "ready?" / any free-text confirmation. Use the Claude Code `AskUserQuestion` tool with a single yes/no:
-
-   - Question: *"Ready to submit `<plugin-name>` to the official marketplace?"*
-   - Options:
-     - `Yes — opening form now` (description: the form tab is open and the clipboard is staged; paste-tab through the fields)
-     - `No — I'll do it later` (description: skip for now; re-run `check-submission.sh` whenever you're ready)
-
-   Ask once. If the user declines, stop — don't repeat the question later in the session.
-
-3. **On "Yes", present the paste-ready fields grouped by form page** so the user can tab through cleanly. Use the exact groupings the script already prints (Page 2 / Page 3). Do not re-summarize or reorder. The big paste (Examples) is on the clipboard; the short fields (name, description, repo URL, email, license) should be visible in chat so the user can grab them without re-running the script.
-
-4. **Platforms field — never claim Claude Cowork** unless `COWORK_TESTED=yes` was set in the environment before running the script. The script already enforces this; don't override it in your chat output.
-
-5. **After the user submits**, you are done with Phase 7. Don't prompt, don't poll — Anthropic's review has no public timeline.
-
-### Form structure (for reference)
-
-The form has three pages:
-
-**Page 1** — Account / submitter info (auto-filled from the Anthropic login).
-
-**Page 2 — Plugin links + details:**
-- Plugin link* — your repo URL
-- Plugin homepage — optional docs URL (often your README)
-- Plugin name* — kebab-case, not taken, no unowned brands
-- Plugin description* — one concise sentence about what it does
-- Example use cases* — formatted as `Example 1: ... \n Example 2: ...`
-
-**Page 3 — Submission details:**
-- Platforms* — surfaces you've tested on (multi-select)
-- License type — `MIT`, `Apache-2.0`, etc. (matches your `LICENSE` file)
-- Privacy policy URL — only if your plugin collects/transmits user data
-- Submitter email* — your contact
-
-Submit at one of:
-- **https://claude.ai/settings/plugins/submit**
-- **https://platform.claude.com/plugins/submit**
-
-Anthropic reviews for quality + security. No public timeline. Once approved, you'll appear in `/plugin discover` and at https://claude.com/plugins.
-
-For the form fields in detail (and what to do if your plugin name is taken): `reference/submission-form.md`.
+Submit at **https://claude.ai/settings/plugins/submit** (or **https://platform.claude.com/plugins/submit**). For the form fields in detail: `reference/submission-form.md`. For the full handoff protocol with `AskUserQuestion` option text: `reference/phase7-handoff.md`.
 
 ---
 
@@ -318,41 +245,44 @@ For the form fields in detail (and what to do if your plugin name is taken): `re
 | Validate | `claude plugin validate .` |
 | Install from a local marketplace | `/plugin marketplace add ./my-plugin` |
 | Install from GitHub | `/plugin marketplace add owner/repo` |
-| Check submission readiness | `./scripts/check-submission.sh ./my-plugin` |
+| Publish to GitHub (idempotent) | `${CLAUDE_PLUGIN_ROOT}/scripts/publish-to-github.sh "<plugin-path>"` |
+| Pre-flight the submission (model invokes via Bash) | `${CLAUDE_PLUGIN_ROOT}/scripts/check-submission.sh "<plugin-path>"` |
 | Submit to official store | https://claude.ai/settings/plugins/submit |
 
 ## Common mistakes
 
 | Mistake | Fix |
 |---|---|
-| Components inside `.claude-plugin/` | Move them to the plugin root. Only `plugin.json`/`marketplace.json` live in `.claude-plugin/`. |
-| Hook command uses absolute path or `..` | Use `${CLAUDE_PLUGIN_ROOT}/scripts/foo.sh` |
+| Components inside `.claude-plugin/` | Move them to the plugin root. See `reference/component-types.md`. |
+| Hook command uses absolute path or `..` | Use `${CLAUDE_PLUGIN_ROOT}/scripts/foo.sh`. See `reference/plugin-manifest.md`. |
 | Plugin works locally but not after install | Plugins are copied to a cache. Files outside the plugin dir aren't copied. Use symlinks or restructure. |
 | Skill description summarizes the workflow | Description should be **when to use**, not **what it does**. The skill body is for the workflow. |
-| Plugin name in PascalCase or with spaces | Kebab-case only (lowercase + digits + hyphens). |
+| Plugin name in PascalCase or with spaces | Kebab-case only. See `reference/marketplace-manifest.md`. |
 | Version bumped in `plugin.json` AND `marketplace.json` | Set in only one place — `plugin.json` always wins silently. |
 | Bumped code without bumping version | Existing users won't see updates due to caching. Always bump the version when you change behavior. |
 | Tried to use `hooks` / `mcpServers` / `permissionMode` in a plugin agent | Not supported in plugin agents (security restriction). |
-| Reserved or impersonating name | See Phase 2 reserved-names list. Pick a different name. |
+| Reserved or impersonating name | See `reference/marketplace-manifest.md` § Reserved marketplace names. |
 
 ## Red flags — you're doing it wrong
 
-- You're putting `commands/` or `skills/` inside `.claude-plugin/`
-- Your plugin has zero components (only a manifest)
-- You're hand-writing JSON without running `claude plugin validate`
-- You're about to open the submission form without running `check-submission.sh`
-- You're using brand names you don't own in your plugin name
-- You haven't tested the actual install path (`/plugin marketplace add`) before submitting
+- Components under `.claude-plugin/` instead of the plugin root
+- Plugin has zero components (only a manifest)
+- Hand-writing JSON without running `claude plugin validate`
+- Opening the submission form without running `check-submission.sh` via the Bash tool first
+- Using brand names you don't own
+- Submitting without verifying the actual install path (`/plugin marketplace add`)
 
 ## Reference index
 
 | File | Load when |
 |---|---|
-| `reference/plugin-manifest.md` | Filling out `plugin.json` (full schema, every field) |
-| `reference/marketplace-manifest.md` | Building `marketplace.json` (sources, channels, strict mode) |
-| `reference/component-types.md` | Picking a component type or debugging one |
-| `reference/hosting-options.md` | Hosting somewhere other than GitHub (GitLab, npm, git-subdir) |
-| `reference/submission-form.md` | Pre-flight for the official marketplace submission |
+| `reference/plugin-manifest.md` | Filling out `plugin.json` (full schema, `${CLAUDE_PLUGIN_ROOT}` rules) |
+| `reference/marketplace-manifest.md` | Building `marketplace.json`; reserved-name + kebab-case rules |
+| `reference/component-types.md` | Picking a component type, debugging, or confirming root-vs-`.claude-plugin/` layout |
+| `reference/hosting-options.md` | Hosting somewhere other than GitHub |
+| `reference/cowork-testing.md` | Phase 4b — manual + Computer Use paths |
+| `reference/submission-form.md` | Submission form fields in detail |
+| `reference/phase7-handoff.md` | Full Phase 7 protocol (AskUserQuestion text, form grouping) |
 | `checklists/pre-publish.md` | Final check before pushing to GitHub |
 | `checklists/submission-ready.md` | Final check before opening the submission form |
 
