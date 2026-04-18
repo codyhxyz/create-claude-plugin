@@ -3,3 +3,6 @@ node_modules/
 *.log
 .env
 .env.local
+
+# private/ — local-only drafts and working notes, not shipped
+private/

@@ -1,24 +1,35 @@
 # create-claude-plugin
 
-> End-to-end skill for building a Claude Code plugin: scaffold → build → test → host on GitHub → submit to the official Anthropic marketplace.
+> *A Claude plugin that helps you ship Claude plugins — scaffold, test, publish, and submit to the official Anthropic marketplace in one session.*
 
-The other plugin guides tell you what plugins *are*. This one walks you all the way through making one and getting it listed at `claude-plugins-official`, including the submission form's exact fields.
+Yes, it's recursive. Someone had to do it.
 
-## What you get
+The other plugin guides explain what plugins *are*. This one walks you from "I have an idea" to "it's live in `claude-plugins-official`" without leaving Claude Code. Validation, local test loop, Cowork portability check, GitHub push, and the submission form's exact fields — all automated. You handle the judgment (naming, scoping, what it should *say*). The skill handles the plumbing.
 
-- A **skill** (`/create-claude-plugin:create-claude-plugin`) that orchestrates the full creation process — installable via `/plugin marketplace add codyhxyz/create-claude-plugin`
-- **Reference docs** for the `plugin.json` schema, `marketplace.json` schema, every component type (skills, agents, hooks, MCP, LSP, monitors, settings), hosting options, and the submission form
-- **Templates** for `plugin.json`, `marketplace.json`, README, LICENSE, CHANGELOG, plus skill/agent/hook starters
-- A **`check-submission.sh`** script that extracts every submission-form field from your plugin and prints them paste-ready
-- **Checklists** for pre-publish + submission-ready
+## Before → After
 
-## Why a skill, not a CLI generator?
+**Before:** "I have a skill in `~/.claude/` and no idea how to share it."
 
-Plugin creation is mostly *judgment* — naming, scoping, picking components, writing a description that's actually a good description. The Claude CLI already handles validation (`claude plugin validate`). What was missing: a guide that closes the loop from "what is this thing" → "it's live in `claude-plugins-official`."
+**After:** Plugin validated with `claude plugin validate`. Repo live on GitHub. `/plugin marketplace add owner/repo` verified in a fresh session. Submission form open in your browser with every field already on your clipboard. ~20 minutes.
 
-Like [chrome-extension-factory](https://github.com/codyhxyz/chrome-extension-factory), this leans on **scripts where determinism matters and the model where judgment matters.** The script catches missing fields. The skill helps you decide what those fields should *say*.
+## What you walk away with
 
-## Installation
+- **A validated plugin** — passes `claude plugin validate`, tested in-session via `claude --plugin-dir`
+- **A live GitHub repo** — `gh repo create` + topics + one-command install flow verified end-to-end
+- **A filled-in submission** — clipboard pre-loaded with every field the form asks for, browser opened to `claude.ai/settings/plugins/submit`, fields grouped by form page so you can paste-tab through
+- **A cross-surface portability check** — optional Cowork smoke-test driven by Claude Code Computer Use (macOS + Pro/Max), so you only claim Cowork support if you've actually shipped there
+
+## Demo
+
+> 🎬 *GIF placeholder — the Phase 7 handoff: skill finishes → clipboard staged → submission URL opens → every field grouped and paste-ready. To see it now, run `./scripts/check-submission.sh <plugin-path>` on a submission-ready plugin.*
+
+## Examples
+
+> **Example 1** — "I have a code-review agent in `.claude/agents/` and I want to share it." The skill converts the agent file into a plugin layout, scaffolds `.claude-plugin/plugin.json` + `marketplace.json`, writes the README with install instructions, runs `claude plugin validate`, pushes to GitHub, and prints every submission-form field ready to paste.
+
+> **Example 2** — "Build me a plugin from scratch that bundles a skill and a PostToolUse hook." Skill picks the right layout (skill at `skills/<name>/SKILL.md`, hook at `hooks/hooks.json`), inserts `${CLAUDE_PLUGIN_ROOT}` substitutions so the hook survives install, runs the local `claude --plugin-dir` test loop, then guides hosting + submission.
+
+## Install
 
 ### Claude Code (recommended)
 
@@ -26,6 +37,8 @@ Like [chrome-extension-factory](https://github.com/codyhxyz/chrome-extension-fac
 /plugin marketplace add codyhxyz/create-claude-plugin
 /plugin install create-claude-plugin@create-claude-plugin
 ```
+
+The `plugin@marketplace` format is `<plugin-name>@<marketplace-name>`; for single-plugin repos like this one the two are identical by convention, which is why the name appears twice.
 
 ### Manual install
 
@@ -37,7 +50,7 @@ cp -r /tmp/ccp/skills/create-claude-plugin/* ~/.claude/skills/create-claude-plug
 
 ## Usage
 
-Just ask Claude Code to make a plugin:
+Ask Claude Code to make a plugin:
 
 > "Help me make a Claude Code plugin out of this skill I have in my `.claude/` dir."
 
@@ -45,9 +58,9 @@ Just ask Claude Code to make a plugin:
 
 > "Scaffold a new Claude plugin with a skill and a hook."
 
-The skill activates automatically and walks you through the seven phases (decide → scaffold → build → test → document → host → submit).
+The skill activates automatically and walks you through seven phases: decide → scaffold → build → test → document → host → submit.
 
-## Pre-flighting a submission
+## Pre-flighting an existing plugin
 
 If you already have a plugin and just want to verify it's submission-ready:
 
@@ -60,7 +73,13 @@ The script:
 2. Checks the name is kebab-case, not reserved, not impersonating, and **not already taken in `claude-plugins-official`**
 3. Confirms your README has an `## Examples` section
 4. Runs `claude plugin validate` if available
-5. Prints every field paste-ready for the form
+5. Copies every paste-ready field to your clipboard and opens the submission URL
+
+## Why this exists
+
+Making a Claude plugin is 20% mechanics and 80% judgment + distribution. The CLI (`claude plugin validate`) handles the mechanics. The other docs explain what plugins *are*. Nobody closes the loop from "I have an idea" to "it's listed at `claude-plugins-official`, installable by anyone running `/plugin install`."
+
+Like [chrome-extension-factory](https://github.com/codyhxyz/chrome-extension-factory), this leans on **scripts where determinism matters and the model where judgment matters.** The script catches missing fields. The skill helps you decide what those fields should say.
 
 ## Repository layout
 
@@ -95,15 +114,9 @@ create-claude-plugin/
 └── .gitignore
 ```
 
-## Examples
-
-> **Example 1:** "I have a code-review agent in `.claude/agents/` and I want to share it." — The skill walks you through converting the agent file into a plugin layout, scaffolds `.claude-plugin/plugin.json` + `marketplace.json`, sets up a README with install instructions, runs `claude plugin validate`, pushes to GitHub, and prints the exact text to paste into the official marketplace submission form.
-
-> **Example 2:** "Build me a plugin from scratch that bundles a SKILL and a PostToolUse hook." — Skill picks the right component layout (skill at `skills/<name>/SKILL.md`, hook at `hooks/hooks.json`), scaffolds with `${CLAUDE_PLUGIN_ROOT}` substitutions in the hook so it works after install, runs the local `claude --plugin-dir` test loop, then guides hosting + submission.
-
 ## Contributing
 
-Issues and PRs welcome. If a docs link in the skill or reference goes stale, that's a bug — file an issue or send a PR.
+Issues and PRs welcome — stale doc links in the skill count as bugs.
 
 ## License
 
