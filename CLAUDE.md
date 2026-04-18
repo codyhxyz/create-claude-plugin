@@ -47,8 +47,8 @@ For a full submission pre-flight (online, with marketplace name availability):
 
 ## Version discipline
 
-- Bump `version` in `.claude-plugin/plugin.json` on every behavior change — cached installs won't update otherwise.
-- Add a `## [<version>]` entry at the top of `CHANGELOG.md` with today's date (`date +%Y-%m-%d`).
+- Bump `version` in `.claude-plugin/plugin.json` **when you ship**, not on every edit. A version is only a version if something shipped — accumulated behavior changes between ships share one bump at release time. (Cached installs won't pick up changes without a bump, so make sure the ship includes one.)
+- On ship, add a `## [<version>]` entry at the top of `CHANGELOG.md` with today's date (`date +%Y-%m-%d`) covering everything that landed since the last release.
 - Version lives in `plugin.json` only, never `marketplace.json`.
 
 ## Testing changes
