@@ -1,6 +1,6 @@
 ---
 name: create-claude-plugin
-description: Use when the user wants to create, package, publish, resume mid-development, or check the status of a Claude Code plugin — including converting a personal `.claude/` config into a shareable plugin, adding a marketplace, hosting on GitHub, submitting to the official Anthropic plugin marketplace, picking up a plugin scaffolded in an earlier session, or shipping an update to an already-published plugin. Triggers on phrases like "make a Claude plugin", "package this skill", "publish to the Claude store", "claude-plugin-official", "/plugin marketplace add", "what's left on my plugin", "plugin status", "am I ready to submit", "resume my plugin", "ship an update", or any request to scaffold, develop, distribute, or submit a Claude Code plugin.
+description: Use when the user wants to create, package, publish, resume mid-development, maintain, rename, or check the status of a Claude Code plugin — including converting a personal `.claude/` config into a shareable plugin, adding a marketplace, hosting on GitHub, submitting to the official Anthropic plugin marketplace, picking up a plugin scaffolded in an earlier session, shipping an update to an already-published plugin, renaming an existing plugin, or syncing plugin.json changes out to marketplace entries and the GitHub repo. Triggers on phrases like "make a Claude plugin", "package this skill", "publish to the Claude store", "claude-plugin-official", "/plugin marketplace add", "what's left on my plugin", "plugin status", "am I ready to submit", "resume my plugin", "ship an update", "rename my plugin", "change the plugin name", "sync plugin metadata", "update the GitHub repo description", "my marketplace is out of sync", "check for drift", "plugin.json and marketplace.json don't match", or any request to scaffold, develop, distribute, submit, rename, or maintain a Claude Code plugin.
 ---
 
 # Create a Claude Code Plugin (end-to-end)
@@ -25,9 +25,9 @@ A Claude Code plugin is a self-contained directory with a `.claude-plugin/plugin
 - Personal-only customization with no intent to share → use `~/.claude/` directly. Plugins add namespacing overhead (`/my-plugin:hello` instead of `/hello`); skip them for solo work.
 - Editing an existing skill's content (no plugin shape changes) → just edit it.
 
-## The seven phases
+## The phases
 
-Run them in order. Each phase has a deliverable. Don't skip — phase N's output is phase N+1's input.
+Phases 0–7 build and ship a new plugin. Phase 8 is ongoing maintenance — only reach for it after a plugin has landed.
 
 | # | Phase | Deliverable |
 |---|---|---|
@@ -40,6 +40,7 @@ Run them in order. Each phase has a deliverable. Don't skip — phase N's output
 | 5.5 | **Draft marketing copy** | Supply-side README (replaces Phase 5 stub) + `MARKETING.md` with launch tweet |
 | 6 | **Host & make installable** | Push to GitHub; verify `/plugin marketplace add owner/repo` works |
 | 7 | **Submit to official store** | Run `check-submission.sh`, fill the form |
+| 8 | **Maintenance (ongoing)** | `check-drift.sh` / `sync-plugin.sh` / `rename-plugin.sh` to keep `plugin.json` ↔ marketplace entries ↔ GitHub in sync |
 
 ---
 
@@ -325,6 +326,43 @@ Submit at **https://claude.ai/settings/plugins/submit** (or **https://platform.c
 
 ---
 
+## Phase 8: Maintenance — keeping metadata in sync
+
+After a plugin ships, its structured metadata lives in three places that all need to agree:
+
+1. **`plugin.json`** — the canonical manifest. Source of truth for `name`, `description`, `keywords`, `license`, `homepage`, `repository`, `author`, `version`.
+2. **`marketplace.json` entries** — listings that reference the plugin. Includes the plugin's own self-marketplace *and* any external marketplace that lists it.
+3. **The GitHub repo itself** — `description`, `homepage`, `topics`, repo slug.
+
+Three scripts keep these in sync. **Pick by what the user is doing, not by what sounds closest:**
+
+| User asks | Script | What it does |
+|---|---|---|
+| "is anything out of sync?" / "check my marketplace" / "are my plugins drifted?" | `check-drift.sh` | Read-only three-way diff. Reports drift, fixes nothing. |
+| "I edited plugin.json, propagate it" / "update the GitHub description" / "sync keywords to topics" / "my marketplace entry is stale" | `sync-plugin.sh` | Pushes non-identity fields (description, homepage, repository, license, keywords, source.repo) from `plugin.json` to matching marketplace entries + `gh repo edit`. |
+| "rename my plugin from X to Y" / "change the plugin name" | `rename-plugin.sh` | Identity change. Updates directory name, URL slugs in manifests, marketplace entries, optionally `gh repo rename` + local git remote. Prints a grep hit list for README/CHANGELOG prose to rewrite by hand — does NOT sed-substitute freeform text. |
+
+**Mental model:** `plugin.json` is the source of truth. `sync-plugin.sh` propagates edits to it. `rename-plugin.sh` is the special case that also cascades to directory + URL slug + GitHub repo name. `check-drift.sh` verifies the result. The three compose — always run `check-drift.sh` after a sync or rename to confirm clean.
+
+**Usage (the model invokes these via Bash, like the other scripts):**
+
+```bash
+# Diagnose
+${CLAUDE_PLUGIN_ROOT}/scripts/check-drift.sh <marketplace-dir-or-json>
+
+# Fix non-identity drift (description, keywords, homepage, etc.)
+${CLAUDE_PLUGIN_ROOT}/scripts/sync-plugin.sh <plugin-dir> [--marketplace <external.json>] [--dry-run]
+
+# Rename (identity change)
+${CLAUDE_PLUGIN_ROOT}/scripts/rename-plugin.sh <plugin-dir> <new-name> [--rename-gh-repo] [--dry-run]
+```
+
+All three support `--dry-run`. Default to `--dry-run` the first time you run `rename-plugin.sh` in a session so the user can review the plan before identity changes hit GitHub.
+
+**Don't hand-edit marketplace entries to match plugin.json** — use `sync-plugin.sh`. **Don't `sed` a rename** — use `rename-plugin.sh`. These scripts exist because manual propagation is exactly where drift enters, and slug cascades (directory → URL → gh remote → marketplace source.repo) are easy to do wrong by hand.
+
+---
+
 ## Quick reference
 
 | Task | Command |
@@ -339,6 +377,9 @@ Submit at **https://claude.ai/settings/plugins/submit** (or **https://platform.c
 | Record hero GIF (VHS; falls back to SVG wordmark) | `${CLAUDE_PLUGIN_ROOT}/scripts/record-demo.sh "<plugin-path>"` |
 | Pre-flight the submission (model invokes via Bash) | `${CLAUDE_PLUGIN_ROOT}/scripts/check-submission.sh "<plugin-path>"` |
 | Cowork smoke-test (end-to-end automated) | `${CLAUDE_PLUGIN_ROOT}/scripts/cowork-smoke-test.sh "<plugin-path>"` |
+| Diagnose drift across marketplace ↔ plugin.json ↔ GitHub | `${CLAUDE_PLUGIN_ROOT}/scripts/check-drift.sh "<marketplace-dir-or-json>"` |
+| Propagate plugin.json edits → marketplace entries + gh repo | `${CLAUDE_PLUGIN_ROOT}/scripts/sync-plugin.sh "<plugin-path>"` |
+| Rename a plugin (directory + manifests + gh repo) | `${CLAUDE_PLUGIN_ROOT}/scripts/rename-plugin.sh "<plugin-path>" <new-name> [--rename-gh-repo]` |
 | Submit to official store | https://claude.ai/settings/plugins/submit |
 
 ## Common mistakes
@@ -355,6 +396,8 @@ Submit at **https://claude.ai/settings/plugins/submit** (or **https://platform.c
 | Tried to use `hooks` / `mcpServers` / `permissionMode` in a plugin agent | Not supported in plugin agents (security restriction). |
 | Reserved or impersonating name | See `reference/marketplace-manifest.md` § Reserved marketplace names. |
 | No `CLAUDE.md` at the plugin root | Copy `templates/plugin/CLAUDE.md` in. Without it, sessions opened in the plugin dir after scaffolding day lose all project grounding — Claude won't know the directory invariants, path rules, or manifest rules. |
+| Hand-edited `plugin.json` description (or keywords, license, homepage) and `marketplace.json` now silently differs | Don't sync by hand. Run `scripts/sync-plugin.sh "<plugin-path>"` to propagate, then `scripts/check-drift.sh` to verify. See Phase 8. |
+| Renamed a plugin by `sed`-ing files, directory still has the old name, GitHub repo still old slug | Don't rename by hand. Run `scripts/rename-plugin.sh "<plugin-path>" <new-name> --rename-gh-repo` — it cascades identity across directory, manifests, marketplace entries, and gh remote. See Phase 8. |
 
 ## Red flags — you're doing it wrong
 
