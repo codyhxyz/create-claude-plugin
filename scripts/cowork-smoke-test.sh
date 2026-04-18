@@ -143,11 +143,16 @@ cat > "$MCP_CFG" <<'JSON'
     "gh-computer-use": {
       "type": "stdio",
       "command": "npx",
-      "args": ["-y", "@github/computer-use-mcp"]
+      "args": ["-y", "@github/computer-use-mcp", "--yolo"]
     }
   }
 }
 JSON
+# --yolo tells @github/computer-use-mcp to auto-allow full desktop access
+# when request_access is called. Without it, the MCP holds a gate that
+# expects an interactive confirmation loop — not available in a headless
+# `claude -p`, which is why our earlier runs failed on request_access
+# "declined" even though macOS TCC was fine.
 
 SYSTEM_PROMPT='You are a headless automation agent running inside claude -p with no human in the loop. Execute the task in the user message exactly. Do NOT ask questions. Do NOT offer alternatives. Do NOT summarize. Use the mcp__gh-computer-use__* tools to drive the macOS desktop. End every response with the COWORK_TEST_RESULT marker the prompt requires.'
 
@@ -191,26 +196,56 @@ else
   echo "    no COWORK_TEST_RESULT marker emitted — test likely timed out or errored early"
 fi
 
-# Detect the specific "macOS didn't grant permissions" failure mode and give
+# Detect the specific "macOS didn't grant permissions" failure modes and give
 # the user a direct path to System Settings — don't just dump the log and
-# make them hunt. This failure is EXTREMELY common on first run.
-if [[ "$LAST_MARKER" == *"request_access"* ]] || grep -q "declined\|Screen Recording\|Accessibility" "$LOG"; then
+# make them hunt. Two distinct failures, two distinct fixes:
+#
+#   (a) MCP says screenshots show desktop/wallpaper despite Claude.app being
+#       foregrounded → the TERMINAL that spawned `claude -p` lacks Screen
+#       Recording. TCC attaches to the capturing process, NOT the target.
+#       The calling process chain is terminal → claude → node (MCP).
+#
+#   (b) MCP `request_access` declined (with --yolo this shouldn't happen,
+#       but older versions or a manual config may hit it) → Claude.app
+#       itself lacks Accessibility.
+#
+# Detect (a) first since it's the more common failure post-yolo.
+TERM_PROCESS="${TERM_PROGRAM:-your terminal}"
+if grep -q "window not visible\|screenshots.*wallpaper\|filtered out by the capture\|screen.recording" "$LOG"; then
   echo
-  echo "==> This is the common first-run failure: Claude.app lacks macOS permissions"
+  echo "==> Failure is macOS Screen Recording — granted to the wrong app"
   echo
-  echo "    Grant BOTH of these to Claude (the desktop app) in System Settings:"
-  echo "      • Screen Recording  (so the automation can screenshot)"
-  echo "      • Accessibility     (so the automation can click + type)"
+  echo "    Screen Recording permission attaches to the capturing PROCESS, not"
+  echo "    the target window. The capturing chain here is:"
+  echo "        $TERM_PROCESS  →  claude -p  →  node (gh-computer-use MCP)"
+  echo "    So $TERM_PROCESS needs Screen Recording. Claude.app doesn't."
   echo
-  echo "    I'll open the relevant Settings panes now. After flipping both switches ON,"
-  echo "    quit + relaunch Claude.app, then re-run:"
-  echo "      $0 $PLUGIN_DIR --yes"
+  echo "    Fix:"
+  echo "      1. System Settings → Privacy & Security → Screen Recording"
+  echo "      2. Turn ON the switch for $TERM_PROCESS (add it with + if it's not listed)"
+  echo "      3. Quit + relaunch $TERM_PROCESS (TCC grants don't apply to the running process)"
+  echo "      4. Re-run from the fresh terminal: $0 $PLUGIN_DIR --yes"
   echo
   if command -v open >/dev/null 2>&1; then
     open "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture" 2>/dev/null || true
-    sleep 1
+    echo "    → Opened Screen Recording settings."
+  fi
+  exit 2
+fi
+
+if [[ "$LAST_MARKER" == *"request_access"* ]] || grep -q "declined\|Accessibility" "$LOG"; then
+  echo
+  echo "==> Failure is macOS Accessibility for Claude.app (and maybe for $TERM_PROCESS)"
+  echo
+  echo "    Fix:"
+  echo "      1. System Settings → Privacy & Security → Accessibility"
+  echo "      2. Turn ON switches for Claude.app AND for $TERM_PROCESS"
+  echo "      3. Quit + relaunch both"
+  echo "      4. Re-run from the fresh terminal: $0 $PLUGIN_DIR --yes"
+  echo
+  if command -v open >/dev/null 2>&1; then
     open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility" 2>/dev/null || true
-    echo "    → Opened Screen Recording + Accessibility settings panes."
+    echo "    → Opened Accessibility settings."
   fi
   exit 2
 fi
