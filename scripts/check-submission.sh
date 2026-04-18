@@ -186,17 +186,27 @@ if [[ -n "$NAME" ]]; then
   fi
 fi
 
-# ---------- Name availability check (online) ----------
+# ---------- Public marketplace snapshot (advisory only) ----------
+# `anthropics/claude-plugins-official/main/.claude-plugin/marketplace.json` is
+# a CURATED snapshot, NOT the authoritative submission status. Plugins published
+# via https://claude.ai/settings/plugins/submit appear on your own dashboard at
+# https://claude.ai/settings/plugins *without* necessarily being added to this
+# public file. So:
+#   - presence here = safe signal the name is definitely taken
+#   - absence here = INCONCLUSIVE, not "available"; check your dashboard
+# Prior versions of this script reported "name is available" on absence, which
+# was misleading once Anthropic moved the authoritative submission tracking
+# behind auth. We now report only what we can verify.
 if [[ "$OFFLINE" != "--offline" ]] && command -v curl >/dev/null 2>&1; then
-  echo "Name availability (claude-plugins-official):"
+  echo "Public marketplace snapshot (advisory):"
   REMOTE_NAMES=$(curl -fsSL "https://raw.githubusercontent.com/anthropics/claude-plugins-official/main/.claude-plugin/marketplace.json" 2>/dev/null \
     | jq -r '.plugins[].name' 2>/dev/null || true)
   if [[ -z "$REMOTE_NAMES" ]]; then
-    warn "could not fetch official marketplace (network or repo path changed) — skipping availability check"
+    warn "could not fetch public marketplace snapshot — skipping check"
   elif echo "$REMOTE_NAMES" | grep -qx "$NAME"; then
-    err "name '$NAME' is already in claude-plugins-official"
+    err "name '$NAME' is in the public snapshot — pick a different name"
   else
-    ok "name '$NAME' is available in claude-plugins-official"
+    ok "name '$NAME' not in the public snapshot (inconclusive — check https://claude.ai/settings/plugins for your actual submission status)"
   fi
 fi
 

@@ -63,7 +63,9 @@ If the user's CLAUDE.md is missing from the plugin root, add it (Phase 2's copy 
 
 ### 0b — Update an already-published plugin
 
-Signs you're here: plugin is in `claude-plugins-official` OR the user explicitly says "ship an update" / "release v0.X.Y".
+Signs you're here: the plugin already appears on **https://claude.ai/settings/plugins** (the authoritative submissions dashboard) OR the user says "ship an update" / "release v0.X.Y".
+
+**How Anthropic tracks submissions.** The authoritative status lives at `claude.ai/settings/plugins` (auth-gated). Each entry shows a status badge (`Published`, review states, etc.) but **no version column and no sync button** — updates are manual re-submissions, not repo-auto-pulls. The public file at `anthropics/claude-plugins-official/.claude-plugin/marketplace.json` is a curated subset and is NOT a reliable status signal; `check-submission.sh` now reports public-snapshot absence as *inconclusive*.
 
 1. **Bump `version`** in `.claude-plugin/plugin.json` per semver (patch = fix, minor = new feature, major = breaking). Set in only one place — `plugin.json` always wins over `marketplace.json` silently.
 2. **Add a CHANGELOG entry** at the top of `CHANGELOG.md`: new version heading, today's date (`date +%Y-%m-%d`), summary of changes. Keep the prior entries; don't rewrite history.
@@ -73,7 +75,7 @@ Signs you're here: plugin is in `claude-plugins-official` OR the user explicitly
    ${CLAUDE_PLUGIN_ROOT}/scripts/check-submission.sh "<plugin-path>"
    ```
 4. **Push the update.** Commit, tag the new version (`git tag v<x.y.z> && git push --tags`), and push. Users running `/plugin install` will pick up the new version on refresh.
-5. **If the plugin is already in `claude-plugins-official`, re-submit.** Anthropic reviews updates separately — the official marketplace doesn't auto-pull new tags. Re-run Phase 7 with the new version.
+5. **Re-submit via the dashboard.** Go to https://claude.ai/settings/plugins → click **New submission** → paste the pre-flight's staged fields → submit. Anthropic reviews the new version as a separate submission; repo-auto-pull does not happen.
 
 Both sub-phases skip scaffolding + component decisions but still go through Phases 4 (test), 5 (doc), 6 (host), and 7 (submit, if applicable).
 

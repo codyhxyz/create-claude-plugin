@@ -39,6 +39,17 @@ Present the fields using the exact groupings the script already prints (Page 2 /
 
 Don't prompt, don't poll — Anthropic's review has no public timeline. Phase 7 ends when the user submits.
 
+## Submission tracking: the authoritative source
+
+Anthropic tracks submissions at **https://claude.ai/settings/plugins** (auth-gated). Each entry shows:
+- **Status badge** (`Published`, review states, etc.)
+- **Submission date**
+- **No version column, no sync button** — updates are manual re-submissions, not repo-auto-pulls.
+
+This is where the user checks whether a submission went through. The public file at `anthropics/claude-plugins-official/.claude-plugin/marketplace.json` is a **curated subset** and does *not* reflect every accepted submission — `check-submission.sh` treats absence there as inconclusive.
+
+**To ship an update:** go to the dashboard → click **New submission** → paste the fields from a fresh `check-submission.sh` run → submit. The new version gets reviewed as a separate submission; there is no "edit existing entry" flow and no auto-pull from the tagged GitHub release.
+
 ## Form structure (for reference)
 
 The form has three pages:
