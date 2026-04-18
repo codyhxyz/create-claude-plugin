@@ -87,7 +87,14 @@ The script:
 
 Making a Claude plugin is 20% mechanics and 80% judgment + distribution. The CLI (`claude plugin validate`) handles the mechanics. The other docs explain what plugins *are*. Nobody closes the loop from "I have an idea" to "it's listed at `claude-plugins-official`, installable by anyone running `/plugin install`."
 
-Like [chrome-extension-factory](https://github.com/codyhxyz/chrome-extension-factory), this leans on **scripts where determinism matters and the model where judgment matters.** The script catches missing fields. The skill helps you decide what those fields should say.
+Like [create-chrome-extension](https://github.com/codyhxyz/create-chrome-extension), this leans on **scripts where determinism matters and the model where judgment matters.** The script catches missing fields. The skill helps you decide what those fields should say.
+
+## Part of the family
+
+`create-claude-plugin` is one of a family of build-and-publish tools for the era of bespoke software. Each sibling solves the same shape of problem — an idea that never leaves the folder it was built in — for a different medium.
+
+- **[create-chrome-extension](https://github.com/codyhxyz/create-chrome-extension)** — build-and-publish for Chrome extensions. Idea → Web Store, end-to-end.
+- **create-claude-plugin** *(you're here)* — build-and-publish for Claude plugins. `~/.claude/` skill → `claude-plugins-official`, end-to-end.
 
 ## Repository layout
 
