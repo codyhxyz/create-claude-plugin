@@ -81,6 +81,56 @@ AUTHOR_EMAIL=$(jq -r '.author.email // empty' "$MANIFEST")
 [[ -n "$LICENSE_ID" ]]  && ok "license: $LICENSE_ID"      || warn "missing 'license' SPDX identifier"
 [[ -n "$HOMEPAGE" ]]    && ok "homepage: $HOMEPAGE"       || warn "no 'homepage' (optional, often the README URL)"
 
+# ---------- Marketplace manifest ----------
+# .claude-plugin/marketplace.json is required for repos that act as their own
+# marketplace (single-plugin repos typically do). Multi-plugin repos sometimes
+# point at an external marketplace repo instead, so a missing file is a warn,
+# not an err.
+echo "Marketplace manifest:"
+MARKETPLACE="$PLUGIN_DIR/.claude-plugin/marketplace.json"
+if [[ ! -f "$MARKETPLACE" ]]; then
+  warn "no .claude-plugin/marketplace.json (ok if you use an external marketplace repo)"
+else
+  if ! jq empty "$MARKETPLACE" >/dev/null 2>&1; then
+    err "marketplace.json is not valid JSON"
+  else
+    ok "marketplace.json parses"
+    MP_NAME=$(jq -r '.name // empty' "$MARKETPLACE")
+    MP_OWNER=$(jq -r '.owner.name // empty' "$MARKETPLACE")
+    MP_PLUGIN_COUNT=$(jq -r '.plugins | length // 0' "$MARKETPLACE" 2>/dev/null || echo 0)
+
+    if [[ -z "$MP_NAME" ]]; then
+      err "marketplace.json missing 'name'"
+    elif [[ "$MP_NAME" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]]; then
+      ok "marketplace name: $MP_NAME"
+    else
+      err "marketplace 'name' ('$MP_NAME') is not kebab-case"
+    fi
+
+    [[ -n "$MP_OWNER" ]] && ok "marketplace owner.name: $MP_OWNER" || err "marketplace.json missing 'owner.name'"
+
+    if [[ "$MP_PLUGIN_COUNT" -ge 1 ]]; then
+      ok "marketplace has $MP_PLUGIN_COUNT plugin entry(ies)"
+
+      MP_FIRST_SOURCE=$(jq -r '.plugins[0].source // empty' "$MARKETPLACE")
+      if [[ -n "$MP_FIRST_SOURCE" ]]; then
+        if [[ "$MP_FIRST_SOURCE" == "./" || "$MP_FIRST_SOURCE" == "."  || "$MP_FIRST_SOURCE" == ./* || "$MP_FIRST_SOURCE" == ../* ]]; then
+          ok "plugins[0].source: $MP_FIRST_SOURCE (relative — ok for single-plugin repo)"
+        else
+          warn "plugins[0].source is '$MP_FIRST_SOURCE' — single-plugin repos usually use './' or a relative path"
+        fi
+      fi
+
+      MP_FIRST_VERSION=$(jq -r '.plugins[0].version // empty' "$MARKETPLACE")
+      if [[ -n "$MP_FIRST_VERSION" && -n "$VERSION" ]]; then
+        warn "version set in BOTH plugin.json ($VERSION) and marketplace.json plugins[0].version ($MP_FIRST_VERSION) — plugin.json wins silently; remove one to avoid drift"
+      fi
+    else
+      err "marketplace.json 'plugins' array is empty"
+    fi
+  fi
+fi
+
 # ---------- Naming rules ----------
 echo "Naming:"
 if [[ -n "$NAME" ]]; then
@@ -140,16 +190,27 @@ fi
 # ---------- Validation (Claude Code) ----------
 if command -v claude >/dev/null 2>&1; then
   echo "claude plugin validate (Claude Code):"
-  if (cd "$PLUGIN_DIR" && claude plugin validate . >/dev/null 2>&1); then
+  VALIDATE_OUT=$(mktemp -t ccp-validate.XXXXXX)
+  if (cd "$PLUGIN_DIR" && claude plugin validate .) >"$VALIDATE_OUT" 2>&1; then
     ok "passes"
   else
-    err "fails — run 'cd $PLUGIN_DIR && claude plugin validate .' to see why"
+    err "fails — validator output below:"
+    sed 's/^/      /' "$VALIDATE_OUT" >&2
   fi
+  rm -f "$VALIDATE_OUT"
 else
   warn "'claude' CLI not found in PATH; skipping 'claude plugin validate'"
 fi
 
 # ---------- Cross-surface portability ----------
+# Last verified against Anthropic Cowork docs: 2026-04-16
+# Staleness guard: warn if these heuristics haven't been re-checked in >180 days.
+# Hardcoded epoch (2026-04-16 UTC) avoids macOS/GNU `date -d` portability issues.
+COWORK_VERIFIED_EPOCH=1776643200
+COWORK_NOW_EPOCH=$(date +%s)
+if (( COWORK_NOW_EPOCH - COWORK_VERIFIED_EPOCH > 180 * 86400 )); then
+  warn "Cowork portability heuristics may be stale (last verified 2026-04-16) — re-check Anthropic docs."
+fi
 # Claude Code and Claude Cowork share the same plugin format and marketplace,
 # but Cowork has no CLI/--plugin-dir — install + test is manual via the
 # desktop app UI. We can't automate Cowork; we CAN flag features that are
