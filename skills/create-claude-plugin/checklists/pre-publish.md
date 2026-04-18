@@ -7,8 +7,10 @@ Run before pushing to GitHub.
 - [ ] `.claude-plugin/plugin.json` exists
 - [ ] `.claude-plugin/marketplace.json` exists (for single-plugin repos)
 - [ ] Component dirs live at the plugin root, not inside `.claude-plugin/` — see `reference/component-types.md`
+- [ ] `CLAUDE.md` exists at the plugin root (copied from `templates/plugin/CLAUDE.md`, `PLUGIN_NAME` placeholder replaced) — grounds every future session in the project's rules
 - [ ] `LICENSE` exists
 - [ ] `README.md` exists with install + usage + at least one example
+- [ ] Ran Phase 5.5; README reads as supply-side, not spec-sheet; launch tweet drafted in `MARKETING.md`
 - [ ] `CHANGELOG.md` exists with a v0.1.0 entry
 - [ ] `.gitignore` exists
 

@@ -1,0 +1,41 @@
+// marketing/og.config.mjs — configuration for the og-card skill.
+//
+// Edit these fields, then run:
+//   ${CLAUDE_PLUGIN_ROOT}/skills/og-card/scripts/render.sh marketing/og.config.mjs
+//
+// Output lands at `assets/og.png` (1200×630, the standard social-preview size
+// used by Twitter / Slack / iMessage / LinkedIn / GitHub's social-preview slot).
+//
+// check-submission.sh warns until the PLACEHOLDER strings below are replaced.
+
+export default {
+  // Plugin name (appears bottom-left of the card)
+  name: "PLUGIN_NAME_PLACEHOLDER",
+
+  // Small uppercase label above the tagline. Category framing — e.g. "Claude plugin", "Skill", "Marketplace".
+  label: "CATEGORY_PLACEHOLDER",
+
+  // Tagline — split across two lines for control over where it wraps.
+  // Each line ≤ ~32 characters. Leave line 2 empty for a single-line tagline.
+  taglineLine1: "YOUR_TAGLINE_LINE_1_PLACEHOLDER",
+  taglineLine2: "",
+
+  // One clarifying sentence under the tagline. ≤ ~90 characters.
+  subtitle: "YOUR_SUBTITLE_PLACEHOLDER",
+
+  // Bottom-right footer text. Useful for the repo URL or your handle.
+  footer: "github.com/OWNER/REPO",
+
+  // Theme: "light" | "dark"
+  theme: "light",
+
+  // Accent color (hex). Used for the side bar, category label, and the
+  // dark-theme corner glow. Pick something distinctive.
+  accent: "#5B7CFA",
+
+  // Override the theme defaults if you want something off-preset.
+  // Comment out to use the theme defaults.
+  // bg: "#FFFFFF",
+  // fg: "#0A0A0A",
+  // muted: "#6B7280",
+};

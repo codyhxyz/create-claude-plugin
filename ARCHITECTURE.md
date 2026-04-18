@@ -123,6 +123,42 @@ This is the v0.3.0 pattern: hand-off to Claude Code's own computer-use rather th
 
 ---
 
+## Persistence across sessions — the week-later dev flow
+
+Plugins aren't always built in one sitting. A user might scaffold on Monday and keep developing through Friday before launching. Through v0.3.0 the skill was implicitly one-shot: once the creation session ended, nothing it produced stayed with the user's plugin-in-development. Every future session started cold.
+
+v0.4.0 closes this gap with three layered mechanisms, ordered by leverage:
+
+### 1. Static: project-local `CLAUDE.md` (the load-bearing fix)
+
+Every plugin scaffolded from Phase 2 onward gets a `CLAUDE.md` at its root, copied from `templates/plugin/CLAUDE.md`. Claude Code automatically loads project-local `CLAUDE.md` files at session start, so *every* future session in the plugin dir begins with the directory invariants, path rules, naming rules, manifest rules, and always-run commands already in context. No dynamic hook, no opt-in friction, no network call. This is where ~80% of the "grounding" comes from.
+
+### 2. On-demand: `--status` mode on `check-submission.sh`
+
+`check-submission.sh` already runs every check the skill cares about. v0.4.0 adds a `--status` flag that reuses the same checks but (a) tolerates incomplete state (exit 0), (b) groups output by the 7 phases, and (c) skips the clipboard + `open` submission handoff. Status output distinguishes ✓ (complete), ⚠ (partial/unverified), and ✗ (truly blocked). A companion `--quiet` flag collapses to a one-line banner for hook consumption.
+
+Why a mode flag instead of a new script: the check logic is the same; duplicating it would drift. The status/submit distinction is one of *reporting*, not of *computation*.
+
+### 3. Ambient: SessionStart hook with silence-is-golden
+
+`hooks/hooks.json` registers a SessionStart hook that runs `scripts/session-start-banner.sh`. On sessions opened outside a plugin dir, the script exits within milliseconds (file-existence pre-check, no fork). Inside a plugin dir, it runs `check-submission.sh --status --quiet --offline` under a `timeout` wrapper and emits a one-line banner *only if* a phase is truly blocked (✗). Partial/unverified phases (⚠) stay silent — nagging on them every session would be noise.
+
+The hook is advisory, never blocking. It cannot exit nonzero on the user's behalf. It does not call `claude plugin validate` during the session-start critical path; that cost is paid lazily inside `check-submission.sh` when the user actively asks for status.
+
+### Why all three, not just one
+
+- CLAUDE.md alone: gives Claude context but not the *user* visibility into progress.
+- `--status` alone: useful only if the user remembers to run it.
+- SessionStart hook alone: speaks up at the right moments but doesn't help within-session reasoning.
+
+Together they form the persistence pipeline: the plugin's standards are always loaded (CLAUDE.md), the user can ask "where am I?" at any time (`--status`), and they get a terminal reminder when session start detects a regression (hook).
+
+### Phase 0 resumption
+
+The skill's Phase 0 now branches: 0a for mid-development resume ("skip Phases 1-3, run `check-submission.sh --status`, pick up from the first incomplete phase"), 0b for updating an already-published plugin. The description frontmatter was broadened to trigger on resume phrases ("what's left on my plugin", "plugin status", "am I ready to submit"). This honors ARCHITECTURE.md's one-mega-skill decision rather than splitting into a separate status skill.
+
+---
+
 ## Anti-goals
 
 - **Don't ship a GUI / TUI.** The skill is the interface.

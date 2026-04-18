@@ -17,7 +17,7 @@ The other plugin guides explain what plugins *are*. This one walks you from "I h
 - **A validated plugin** — passes `claude plugin validate`, tested in-session via `claude --plugin-dir`
 - **A live GitHub repo** — `gh repo create` + topics + one-command install flow verified end-to-end
 - **A filled-in submission** — clipboard pre-loaded with every field the form asks for, browser opened to `claude.ai/settings/plugins/submit`, fields grouped by form page so you can paste-tab through
-- **A cross-surface portability check** — optional Cowork smoke-test driven by Claude Code Computer Use (macOS + Pro/Max), so you only claim Cowork support if you've actually shipped there
+- **A Cowork smoke-test, automated** — most toolkits stop at `claude plugin validate`; this one drives the Cowork desktop app for you. Claude Code's Computer Use installs your plugin, runs your test prompt, and screenshots errors — no manual clicking. (macOS + Pro/Max; manual fallback otherwise.)
 
 ## Demo
 

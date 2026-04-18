@@ -1,52 +1,48 @@
 # Cowork cross-surface testing
 
-Claude Cowork (the desktop app) shares the plugin format and official marketplace with Claude Code, but there's no CLI or `--plugin-dir` equivalent — install + test is manual via the app UI. Two paths.
+Cowork (the Claude desktop app) has no CLI. Testing your plugin there means installing via the app UI and triggering your skill in a real session.
 
-## Path A — manual (any platform)
+**This plugin automates it end-to-end.** Claude Code's built-in `computer-use` MCP drives the desktop app for you: installs the plugin, opens a Cowork session, runs your test prompt, screenshots any errors, reports back.
 
-Works on macOS and Windows. Required if you're not on a Pro/Max plan or don't want to grant Computer Use permissions.
-
-1. Open the Claude desktop app (macOS or Windows).
-2. Go to the **Cowork** tab.
-3. **Customize** → **Browse plugins**.
-4. Either install from the marketplace (if already published) OR **upload a `.zip`** of your plugin directory.
-5. Smoke-test the skill / agent / hook by triggering it in a real Cowork session.
-
-## Path B — semi-automated via Claude Code Computer Use
-
-Claude Code ships a built-in `computer-use` MCP server that lets Claude take screenshots and click/type on macOS GUI apps. You can hand off the entire Cowork test to it instead of doing the manual steps yourself.
+## Run it
 
 **Prerequisites:**
 - macOS
-- Claude Pro or Max plan (not Team/Enterprise)
-- Claude Code v2.1.85 or later (`claude --version`)
+- Claude Pro or Max plan
+- Claude Code v2.1.85+ (`claude --version`)
 - Claude desktop app installed
-- Interactive Claude Code session (computer-use is unavailable with the `-p` flag)
+- Interactive Claude Code session (not `-p`)
 
-**Steps:**
-1. In an interactive Claude Code session, run `/mcp`, find `computer-use`, and **Enable** it.
-2. The first time it runs, grant macOS Accessibility + Screen Recording permissions when prompted.
-3. Paste this prompt (or generate a pre-filled one — see below):
-
-   > Open the Claude desktop app and switch to the Cowork tab. Click Customize → Browse plugins → upload (the file at `<absolute-path-to-your-plugin>.zip`). Once installed, run a Cowork session that triggers my plugin's main skill (e.g., the prompt: `<a-realistic-test-prompt-for-your-plugin>`). Screenshot any errors. Report whether the skill responded as expected.
-
-4. Watch Claude Code drive the desktop app. Press `Esc` from anywhere to abort.
-5. If it works: `export COWORK_TESTED=yes` and re-run `check-submission.sh`.
-
-**Generate a pre-filled prompt** (picks up plugin name, absolute path, and a test prompt from README Usage):
+**One command:**
 
 ```bash
-./scripts/check-submission.sh /path/to/plugin --print-cowork-prompt
+./scripts/check-submission.sh /path/to/your/plugin --print-cowork-prompt
 ```
+
+Paste the printed prompt into an interactive Claude Code session. The prompt is a self-driving onboarding script — it walks you through every step, stopping for your permission at each consent boundary:
+
+1. **Verifies `computer-use` is enabled.** If not, tells you exactly what to do (`/mcp` → toggle ON). Waits until you confirm.
+2. **Requests macOS permissions.** Triggers Accessibility + Screen Recording prompts. Guides you through System Settings if macOS doesn't auto-prompt. Won't move on until granted.
+3. **Installs your plugin in Cowork.** Opens the Claude desktop app, switches to the Cowork tab, navigates Customize → Browse plugins, and installs from the marketplace (or asks you to drop the `.zip` if you're pre-publish).
+4. **Runs your test prompt.** Starts a Cowork session, pastes a realistic prompt from your README's Usage section, screenshots the response.
+5. **Unlocks the submission gate.** If the smoke-test passes, the onboarding sets `COWORK_TESTED=yes` and re-runs `check-submission.sh` for you. If it fails, it helps you debug or confirms that leaving Cowork unchecked is the right call.
+
+Press `Esc` at any point to abort.
+
+## Fallback: no macOS or no Pro/Max
+
+Install manually: Claude desktop → **Cowork** tab → **Customize** → **Browse plugins** → install from the marketplace (if published) or upload a `.zip`. Trigger your main skill in a Cowork session yourself. Same gate: `COWORK_TESTED=yes` only after you've actually done it.
 
 ## Portability heuristics
 
-**Likely portable** (per Anthropic's plugin docs — Cowork shares the SKILL.md format and marketplace with Code):
+Cowork shares the SKILL.md format and marketplace with Claude Code (per Anthropic's plugin docs).
+
+**Likely portable:**
 - Skills (`skills/<name>/SKILL.md`) ✓
 - Agents (`agents/*.md`) ✓
-- MCP servers (Cowork integrates external apps via MCP) — likely ✓ but verify.
+- MCP servers — likely ✓ but verify
 
-**Likely Code-only** (not yet documented as Cowork-supported):
+**Likely Code-only:**
 - Hooks — Cowork's event model may differ
 - LSP servers — Code's code-intelligence surface
 - Monitors — interactive CLI sessions
@@ -54,4 +50,4 @@ Claude Code ships a built-in `computer-use` MCP server that lets Claude take scr
 
 ## Submission form gate
 
-**Don't claim Cowork support on the submission form unless you've actually tested it.** The pre-flight script (`check-submission.sh`) blocks the Cowork checkbox in the Platforms output unless you set `COWORK_TESTED=yes` to confirm you've done the manual test.
+`check-submission.sh` blocks the Cowork checkbox in the Platforms output unless `COWORK_TESTED=yes` is set. Don't claim Cowork support you haven't verified.
