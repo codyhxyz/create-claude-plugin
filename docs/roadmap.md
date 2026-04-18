@@ -45,6 +45,7 @@ Status legend: `todo` · `in-progress` · `shipped` · `deferred` · `dropped`
 | C1 | `scripts/sync-readme.sh` with `<!-- auto:start -->` / `<!-- auto:end -->` markers | todo | `create-claude-plugin/scripts/sync-readme.sh` | M | Reads `plugin.json` → rewrites badges + install block |
 | C2 | Tag + `gh release create` from CHANGELOG | todo | extends B1 | S | Runs after first push |
 | C3 | Extend `scripts/check-submission.sh` — warn on missing badges, unset metadata, missing hero | todo | `create-claude-plugin/scripts/check-submission.sh` | M | |
+| C4 | Add `/humanizer` pass to automated pipeline | todo | `create-claude-plugin/scripts/check-submission.sh` (and publish handoff) | M | Humanize final README/manifest outputs before submission-open handoff, then keep human review checkpoints explicit |
 
 ### Phase D — Hero pipeline
 
