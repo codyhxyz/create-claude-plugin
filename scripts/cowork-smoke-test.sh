@@ -65,7 +65,11 @@ else
 fi
 
 # ---------- Ensure computer-use MCP is configured (user scope) ----------
-MCP_NAME="computer-use"
+# The bare name "computer-use" is reserved by Claude Code (for a future
+# first-party built-in, presumably), so we add @github/computer-use-mcp
+# under the namespaced alias "gh-computer-use". Tool names follow suit:
+# mcp__gh-computer-use__<tool>.
+MCP_NAME="gh-computer-use"
 needs_mcp_add="0"
 if ! claude mcp list 2>&1 | grep -qi "^${MCP_NAME}:"; then
   needs_mcp_add="1"
@@ -113,20 +117,56 @@ PROMPT=$(sed \
   "$PROMPT_TMPL")
 
 # ---------- Run the subprocess ----------
+# Isolation strategy:
+#   --bare                    skip CLAUDE.md auto-discovery, hooks, SessionStart, etc.
+#                             Without this, the subprocess inherits the current project's
+#                             context and goes conversational instead of executing.
+#   --mcp-config <json>       explicitly load only the gh-computer-use MCP — don't
+#                             drag in the user's full MCP set (Notion, Gmail, etc.).
+#   --system-prompt           override the default "friendly assistant" posture with
+#                             a headless-automation posture.
+#   --permission-mode bypass  + --allowedTools narrow list = no per-call prompts for
+#                             the tools the prompt actually needs; stray calls blocked.
+#   --output-format text      keeps the COWORK_TEST_RESULT marker greppable at the tail.
+#   --max-budget-usd 2        API-key billing safety rail if the subprocess loops.
+#
+# The `cd /tmp` keeps the subprocess out of this project dir so even without
+# --bare, no project CLAUDE.md would be picked up.
 echo "==> Running autonomous Cowork test (~2-3 min — stay out of the way so the Mac doesn't fight the automation)"
 LOG=$(mktemp -t cowork-test.XXXXXX)
-trap 'rm -f "$LOG"' EXIT
+MCP_CFG=$(mktemp -t cowork-mcp.XXXXXX.json)
+trap 'rm -f "$LOG" "$MCP_CFG"' EXIT
 
-# --permission-mode bypassPermissions lets the subprocess call tools without
-# per-call prompts. --allowedTools narrows it to what the autonomous prompt
-# actually needs; stray tool calls are blocked. --output-format text keeps the
-# PASS/FAIL marker easy to grep.
-if claude -p "$PROMPT" \
+cat > "$MCP_CFG" <<'JSON'
+{
+  "mcpServers": {
+    "gh-computer-use": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "@github/computer-use-mcp"]
+    }
+  }
+}
+JSON
+
+SYSTEM_PROMPT='You are a headless automation agent running inside claude -p with no human in the loop. Execute the task in the user message exactly. Do NOT ask questions. Do NOT offer alternatives. Do NOT summarize. Use the mcp__gh-computer-use__* tools to drive the macOS desktop. End every response with the COWORK_TEST_RESULT marker the prompt requires.'
+
+# NB: we do NOT pass --bare because --bare disables keychain reads and the
+# subscription-authenticated user won't have ANTHROPIC_API_KEY set. Instead
+# we isolate via cwd=/tmp (no project CLAUDE.md), --setting-sources "" (no
+# user/project/local settings), and --system-prompt (override the default
+# posture). MCPs load exclusively from --mcp-config.
+if (cd /tmp && claude -p "$PROMPT" \
+     --setting-sources "" \
+     --strict-mcp-config \
+     --mcp-config "$MCP_CFG" \
+     --system-prompt "$SYSTEM_PROMPT" \
      --permission-mode bypassPermissions \
-     --allowedTools "mcp__computer-use__* Bash Read Write" \
+     --allowedTools "mcp__gh-computer-use__* Bash Read Write" \
      --output-format text \
      --max-budget-usd 2 \
-     > "$LOG" 2>&1; then
+     --disable-slash-commands \
+     > "$LOG" 2>&1); then
   SUBPROC_EXIT=0
 else
   SUBPROC_EXIT=$?
@@ -150,6 +190,31 @@ if [[ -n "$LAST_MARKER" ]]; then
 else
   echo "    no COWORK_TEST_RESULT marker emitted — test likely timed out or errored early"
 fi
+
+# Detect the specific "macOS didn't grant permissions" failure mode and give
+# the user a direct path to System Settings — don't just dump the log and
+# make them hunt. This failure is EXTREMELY common on first run.
+if [[ "$LAST_MARKER" == *"request_access"* ]] || grep -q "declined\|Screen Recording\|Accessibility" "$LOG"; then
+  echo
+  echo "==> This is the common first-run failure: Claude.app lacks macOS permissions"
+  echo
+  echo "    Grant BOTH of these to Claude (the desktop app) in System Settings:"
+  echo "      • Screen Recording  (so the automation can screenshot)"
+  echo "      • Accessibility     (so the automation can click + type)"
+  echo
+  echo "    I'll open the relevant Settings panes now. After flipping both switches ON,"
+  echo "    quit + relaunch Claude.app, then re-run:"
+  echo "      $0 $PLUGIN_DIR --yes"
+  echo
+  if command -v open >/dev/null 2>&1; then
+    open "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture" 2>/dev/null || true
+    sleep 1
+    open "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility" 2>/dev/null || true
+    echo "    → Opened Screen Recording + Accessibility settings panes."
+  fi
+  exit 2
+fi
+
 echo
 echo "Last 40 lines of subprocess output:"
 tail -40 "$LOG" | sed 's/^/    /'

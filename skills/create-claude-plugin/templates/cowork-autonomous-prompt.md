@@ -13,17 +13,17 @@ You are running an autonomous Cowork smoke-test for the plugin **{{PLUGIN_NAME}}
 ## Preconditions (guaranteed by the caller)
 
 - macOS with Claude desktop app installed
-- `@github/computer-use-mcp` is loaded (tools available under `mcp__computer-use__*`)
+- `@github/computer-use-mcp` is loaded (tools available under `mcp__gh-computer-use__*`)
 - Claude.app already has Accessibility + Screen Recording permissions (or this script wouldn't have been dispatched)
 
 ## Your job
 
-1. **Open Claude desktop.** Call `mcp__computer-use__open_application` with `"Claude"`. Screenshot.
+1. **Open Claude desktop.** Call `mcp__gh-computer-use__open_application` with `"Claude"`. Screenshot.
 2. **Navigate to Cowork.** Locate and click the Cowork tab. Screenshot.
 3. **Install the plugin.**
    - Click Customize → Browse plugins.
    - If `{{PLUGIN_NAME}}` appears in the marketplace list, click Install.
-   - If NOT found, zip the plugin directory via Bash: `(cd "{{PLUGIN_PATH}}/.." && zip -qr /tmp/{{PLUGIN_NAME}}.zip "$(basename "{{PLUGIN_PATH}}")" -x "*/node_modules/*" "*/.git/*")` then drag the zip into the UI via `mcp__computer-use__drag_and_drop`.
+   - If NOT found, zip the plugin directory via Bash: `(cd "{{PLUGIN_PATH}}/.." && zip -qr /tmp/{{PLUGIN_NAME}}.zip "$(basename "{{PLUGIN_PATH}}")" -x "*/node_modules/*" "*/.git/*")` then drag the zip into the UI via `mcp__gh-computer-use__drag_and_drop`.
    - Confirm `{{PLUGIN_NAME}}` is installed (listed in the installed plugins view).
 4. **Start a new Cowork session.** Click new-session button. Screenshot.
 5. **Run the test prompt.** Type or paste this *exact* prompt into the session:
@@ -55,6 +55,6 @@ Don't retry a third time. Don't ask the user. Fail-and-report is better than han
 ## Timing budget
 
 - Total wall-clock target: under 3 minutes
-- Each `mcp__computer-use__*` call: under 15 seconds
+- Each `mcp__gh-computer-use__*` call: under 15 seconds
 - Post-prompt wait: 60 seconds max
 - If the run approaches 3 minutes without a PASS marker, emit FAIL with reason "timeout" and exit.

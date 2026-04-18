@@ -201,7 +201,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/cowork-smoke-test.sh "<plugin-path>"
 The script:
 1. Confirms the plan in one prompt (`Proceed? [y/N]`) listing the MCP it'll install and the subprocess it'll spawn.
 2. First-run only: `claude mcp add computer-use --scope user -- npx -y @github/computer-use-mcp` (~30s).
-3. Spawns `claude -p` with `--permission-mode bypassPermissions --allowedTools "mcp__computer-use__* Bash Read Write"` and feeds it the autonomous prompt at `templates/cowork-autonomous-prompt.md`. That subprocess installs the plugin in Cowork, runs the test prompt from your README's Usage section, and emits `COWORK_TEST_RESULT: PASS` or `FAIL` on stdout.
+3. Spawns `claude -p` with `--permission-mode bypassPermissions --allowedTools "mcp__gh-computer-use__* Bash Read Write"` and feeds it the autonomous prompt at `templates/cowork-autonomous-prompt.md`. That subprocess installs the plugin in Cowork, runs the test prompt from your README's Usage section, and emits `COWORK_TEST_RESULT: PASS` or `FAIL` on stdout.
 4. On PASS: re-runs `check-submission.sh` with `COWORK_TESTED=yes` — gate unlocked, Cowork checkbox free.
 5. On FAIL: prints the subprocess tail and exits non-zero. Claim Code only.
 

@@ -1,6 +1,6 @@
 # Cowork cross-surface testing
 
-Cowork (the Claude desktop app) has no CLI. Testing your plugin there means installing via the app UI and triggering your skill in a real session. **This plugin automates it end-to-end** via a headless `claude -p` subprocess that drives the desktop app through `@github/computer-use-mcp`.
+Cowork (the Claude desktop app) has no CLI. Testing your plugin there means installing via the app UI and triggering your skill in a real session. **This plugin automates it end-to-end** via a headless `claude -p` subprocess that drives the desktop app through `@github/computer-use-mcp` (registered under the alias `gh-computer-use` because `computer-use` is a reserved name in Claude Code's MCP registry).
 
 ## Run it (one command)
 
@@ -11,8 +11,8 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/cowork-smoke-test.sh /path/to/your/plugin
 Single consent gate at the top — "Proceed? [y/N]" — then everything runs unattended. The script:
 
 1. **Verifies prereqs** — macOS, Claude Code ≥ v2.1.85, Claude desktop app installed, `jq` + `npx` available.
-2. **Adds `@github/computer-use-mcp` at user scope** (first run only, ~30s first install via npx). Re-runs skip this.
-3. **Spawns a headless `claude -p` subprocess** with `--permission-mode bypassPermissions --allowedTools "mcp__computer-use__* Bash Read Write"`. The subprocess follows the autonomous prompt at `templates/cowork-autonomous-prompt.md`:
+2. **Adds `@github/computer-use-mcp` (registered under the alias `gh-computer-use` because `computer-use` is a reserved name in Claude Code's MCP registry) at user scope** (first run only, ~30s first install via npx). Re-runs skip this.
+3. **Spawns a headless `claude -p` subprocess** with `--permission-mode bypassPermissions --allowedTools "mcp__gh-computer-use__* Bash Read Write"`. The subprocess follows the autonomous prompt at `templates/cowork-autonomous-prompt.md`:
    - Opens Claude desktop
    - Navigates to Cowork → Customize → Browse plugins
    - Installs your plugin (from the marketplace, or by zipping the plugin dir and dragging the zip in if it's pre-publish)
@@ -56,7 +56,7 @@ Install manually: Claude desktop → **Cowork** tab → **Customize** → **Brow
 
 ## What's in the `computer-use` MCP
 
-`@github/computer-use-mcp` is GitHub's open-source MCP server (published on npm). It exposes tools for:
+`@github/computer-use-mcp` (registered under the alias `gh-computer-use` because `computer-use` is a reserved name in Claude Code's MCP registry) is GitHub's open-source MCP server (published on npm). It exposes tools for:
 - `open_application` — launch apps
 - `screenshot` / `screenshot_region` — visual inspection
 - `click` / `double_click` / `right_click` — mouse
