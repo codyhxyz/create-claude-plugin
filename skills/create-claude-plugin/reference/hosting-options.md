@@ -5,10 +5,10 @@ Where to host your plugin and how users install it.
 ## Option 1: GitHub (recommended)
 
 ```bash
-gh repo create owner/plugin-name --public --source=. --remote=origin --push \
-  --description "What it does"
-gh repo edit owner/plugin-name --add-topic claude-code --add-topic claude-skill
+${CLAUDE_PLUGIN_ROOT}/scripts/publish-to-github.sh <plugin-dir>
 ```
+
+Idempotent — safe to re-run. Reads `.claude-plugin/plugin.json` for name/description/homepage/version, auto-detects topics from the component layout + manifest keywords, creates the repo (or pushes the current branch), tags the release, and opens a PR against the meta-marketplace. See **Phase 6** in `SKILL.md` for the full list of env-var overrides.
 
 Users install:
 

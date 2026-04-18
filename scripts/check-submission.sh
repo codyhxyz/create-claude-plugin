@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# check-submission.sh — pre-flight a Claude Code plugin for the official store
+# check-submission.sh — pre-flight a Claude Code plugin for the official store,
+# OR report phase-grouped status mid-development with --status.
 #
-# Usage:  ./check-submission.sh <plugin-dir> [--offline] [--no-open] [--print-cowork-prompt]
+# Usage:  ./check-submission.sh <plugin-dir> [--offline] [--no-open] [--print-cowork-prompt] [--status [--quiet]]
 #
 # Reads <plugin-dir>/.claude-plugin/plugin.json + README, verifies every
 # field the submission form requires is present + well-formed, and prints
@@ -12,6 +13,12 @@
 #   - opens the submission form in the browser via `open`
 # Pass --no-open (or set CCP_NO_OPEN=1) to skip the clipboard + browser step
 # for CI / non-interactive use.
+#
+# --status mode: runs the same checks but tolerates incomplete state (exit 0),
+# skips the clipboard/open handoff, and emits a phase-grouped report keyed to
+# the 7 phases of the create-claude-plugin skill. Use mid-development to answer
+# "what's left before I can submit?". Add --quiet to collapse the report to a
+# one-line banner suitable for SessionStart hooks.
 
 set -euo pipefail
 
@@ -21,18 +28,26 @@ PLUGIN_DIR=""
 OFFLINE=""
 PRINT_COWORK_PROMPT=""
 NO_OPEN="${CCP_NO_OPEN:-}"
+STATUS_MODE=""
+QUIET_MODE=""
 for arg in "$@"; do
   case "$arg" in
     --offline)              OFFLINE="--offline" ;;
     --print-cowork-prompt)  PRINT_COWORK_PROMPT="yes" ;;
     --no-open)              NO_OPEN="1" ;;
-    --help|-h)              echo "Usage: $0 <plugin-dir> [--offline] [--no-open] [--print-cowork-prompt]"; exit 0 ;;
+    --status)               STATUS_MODE="1"; NO_OPEN="1" ;;
+    --quiet)                QUIET_MODE="1" ;;
+    --help|-h)              echo "Usage: $0 <plugin-dir> [--offline] [--no-open] [--print-cowork-prompt] [--status [--quiet]]"; exit 0 ;;
     *)                      [[ -z "$PLUGIN_DIR" ]] && PLUGIN_DIR="$arg" ;;
   esac
 done
 
 if [[ -z "$PLUGIN_DIR" ]]; then
-  echo "Usage: $0 <plugin-dir> [--offline] [--no-open] [--print-cowork-prompt]" >&2
+  echo "Usage: $0 <plugin-dir> [--offline] [--no-open] [--print-cowork-prompt] [--status [--quiet]]" >&2
+  exit 2
+fi
+if [[ -n "$QUIET_MODE" && -z "$STATUS_MODE" ]]; then
+  echo "ERROR: --quiet only makes sense with --status" >&2
   exit 2
 fi
 if [[ ! -d "$PLUGIN_DIR" ]]; then
@@ -50,17 +65,38 @@ LICENSE_FILE="$PLUGIN_DIR/LICENSE"
 
 ERRORS=0
 WARNINGS=0
-err()  { echo "  ✗ $*" >&2; ERRORS=$((ERRORS+1)); }
-warn() { echo "  ! $*" >&2; WARNINGS=$((WARNINGS+1)); }
-ok()   { echo "  ✓ $*"; }
+VALIDATE_OK=""
+# In --quiet mode (SessionStart banner use case), silence the verbose
+# per-check trace on both stdout and stderr — only the final one-line
+# banner goes to stdout.
+if [[ -n "$QUIET_MODE" ]]; then
+  err()  { ERRORS=$((ERRORS+1)); }
+  warn() { WARNINGS=$((WARNINGS+1)); }
+  ok()   { :; }
+  echo() { :; }
+else
+  err()  { command echo "  ✗ $*" >&2; ERRORS=$((ERRORS+1)); }
+  warn() { command echo "  ! $*" >&2; WARNINGS=$((WARNINGS+1)); }
+  ok()   { command echo "  ✓ $*"; }
+fi
 
 echo "==> Checking $PLUGIN_DIR"
 
 # ---------- File presence ----------
 echo "Files:"
-[[ -f "$MANIFEST" ]] && ok ".claude-plugin/plugin.json" || { err "missing .claude-plugin/plugin.json"; exit 1; }
+if [[ -f "$MANIFEST" ]]; then
+  ok ".claude-plugin/plugin.json"
+else
+  err "missing .claude-plugin/plugin.json"
+  # In status mode, keep going so we can emit the phase report; classic mode stops.
+  [[ -z "$STATUS_MODE" ]] && exit 1
+fi
 [[ -f "$README"   ]] && ok "README.md"                  || err "missing README.md"
 [[ -f "$LICENSE_FILE" ]] && ok "LICENSE"                || warn "missing LICENSE file"
+# CLAUDE.md grounds every future session in the project's rules. Warn on
+# missing (not err) so pre-CLAUDE.md plugins don't regress on classic mode.
+CLAUDE_MD="$PLUGIN_DIR/CLAUDE.md"
+[[ -f "$CLAUDE_MD" ]] && ok "CLAUDE.md" || warn "missing CLAUDE.md — copy templates/plugin/CLAUDE.md in so future sessions know this is a plugin"
 
 # ---------- Manifest fields ----------
 echo "Manifest:"
@@ -187,15 +223,61 @@ if [[ -f "$README" ]]; then
   fi
 fi
 
+# ---------- Marketing copy (Phase 5.5) ----------
+# Warnings only. README quality + MARKETING.md presence don't block submission,
+# but a spec-sheet README is the biggest reason good plugins don't land — flag
+# obvious regressions so the human can fix before hitting "submit".
+echo "Marketing copy (Phase 5.5):"
+MARKETING="$PLUGIN_DIR/MARKETING.md"
+if [[ -f "$MARKETING" ]]; then
+  ok "MARKETING.md present"
+  if ! grep -q -i '^## *Launch tweet' "$MARKETING"; then
+    warn "MARKETING.md is missing a '## Launch tweet' section"
+  fi
+else
+  warn "MARKETING.md not found — run Phase 5.5 of the create-claude-plugin skill to draft a launch tweet"
+fi
+
+if [[ -f "$README" ]]; then
+  SUPPLY_MARKERS=0
+  grep -q -i '^## *Before'     "$README" 2>/dev/null && SUPPLY_MARKERS=$((SUPPLY_MARKERS+1))
+  grep -q -i '^## *What you'   "$README" 2>/dev/null && SUPPLY_MARKERS=$((SUPPLY_MARKERS+1))
+  grep -q -i 'walk away with'  "$README" 2>/dev/null && SUPPLY_MARKERS=$((SUPPLY_MARKERS+1))
+  if [[ "$SUPPLY_MARKERS" -eq 0 ]]; then
+    warn "README has no supply-side markers (no '## Before', no '## What you', no 'walk away with') — reads as a spec sheet. Run Phase 5.5."
+  else
+    ok "README has $SUPPLY_MARKERS supply-side marker(s)"
+  fi
+
+  BANNED_HITS=$(grep -c -i -E 'simply|easily|comprehensive|everything you need|a suite of' "$README" 2>/dev/null || true)
+  if [[ "$BANNED_HITS" -gt 0 ]]; then
+    warn "README uses $BANNED_HITS line(s) with banned marketing words: simply / easily / comprehensive / everything you need / a suite of"
+  fi
+fi
+
+# OG card — opt-in via the og-card skill. Silent if neither file exists; positive
+# signal if the PNG is committed; warn if the user started a config but never
+# replaced the placeholders (= rendered card would fail).
+OG_PNG="$PLUGIN_DIR/assets/og.png"
+OG_CONFIG="$PLUGIN_DIR/marketing/og.config.mjs"
+if [[ -f "$OG_PNG" ]]; then
+  OG_BYTES=$(wc -c < "$OG_PNG" | tr -d ' ')
+  ok "assets/og.png present ($OG_BYTES bytes) — upload to GitHub → repo Settings → Social preview"
+fi
+if [[ -f "$OG_CONFIG" ]] && grep -q -E 'PLACEHOLDER|YOUR_TAGLINE|YOUR_SUBTITLE|OWNER/REPO' "$OG_CONFIG" 2>/dev/null; then
+  warn "marketing/og.config.mjs has unreplaced placeholders — run og-card skill or delete the file"
+fi
+
 # ---------- Validation (Claude Code) ----------
 if command -v claude >/dev/null 2>&1; then
   echo "claude plugin validate (Claude Code):"
   VALIDATE_OUT=$(mktemp -t ccp-validate.XXXXXX)
   if (cd "$PLUGIN_DIR" && claude plugin validate .) >"$VALIDATE_OUT" 2>&1; then
     ok "passes"
+    VALIDATE_OK="1"
   else
     err "fails — validator output below:"
-    sed 's/^/      /' "$VALIDATE_OUT" >&2
+    [[ -z "$QUIET_MODE" ]] && sed 's/^/      /' "$VALIDATE_OUT" >&2
   fi
   rm -f "$VALIDATE_OUT"
 else
@@ -246,21 +328,190 @@ if [[ ${#PORTABILITY_FLAGS[@]} -eq 0 ]]; then
   ok "no Code-only features detected — plugin should be portable to Cowork (still requires manual install + test)"
 fi
 
-# ---------- Cowork manual confirmation ----------
-# Cowork has no CLI. Force the human to confirm they've actually tested it
-# before claiming Cowork as a supported platform on the submission form.
-echo "Cowork manual test:"
-echo "  Path A (manual):     Claude desktop → Cowork tab → Customize → Browse plugins → Install / .zip upload"
-echo "  Path B (macOS Pro+): in interactive Claude Code, /mcp → enable 'computer-use', then re-run this script with --print-cowork-prompt to get a paste-ready prompt that drives the test"
+# ---------- Cowork smoke-test confirmation ----------
+# Cowork has no CLI. The plugin's recommended path is Claude Code's built-in
+# `computer-use` MCP driving the desktop app end-to-end. Force the human to
+# confirm they've actually tested before claiming Cowork on the submission form.
+echo "Cowork smoke-test (via Claude Code Computer Use):"
+echo "  Re-run: $0 \"$PLUGIN_DIR\" --print-cowork-prompt"
+echo "  Paste the result into an interactive Claude Code session after /mcp → enable 'computer-use'."
+echo "  No macOS or no Pro/Max? Manual fallback: Claude desktop → Cowork → Customize → Browse plugins (.zip upload ok), then smoke-test."
 if [[ "${COWORK_TESTED:-}" == "yes" ]]; then
-  ok "COWORK_TESTED=yes — you've confirmed manual install + smoke test passed"
+  ok "COWORK_TESTED=yes — you've confirmed the smoke-test passed"
 else
-  warn "Cowork install + smoke test NOT confirmed. Set COWORK_TESTED=yes after testing (manually or via Path B), or DO NOT select Cowork in Platforms."
+  warn "Cowork smoke-test NOT confirmed. Set COWORK_TESTED=yes after testing, or DO NOT select Cowork in Platforms."
+fi
+
+# ---------- Repo polish (Phase 6) ----------
+# Warnings only. A plugin can submit without these, but a Phase 6 flow that
+# ran publish-to-github.sh will have all of them. Flag regressions so the
+# human can backfill before the submission form.
+echo "Repo polish (Phase 6):"
+
+if [[ -f "$README" ]]; then
+  if grep -q -E 'img\.shields\.io/(github/package-json|badge)' "$README" 2>/dev/null; then
+    ok "README has shield badges"
+  else
+    warn "README has no shield badges (license/version/built-for-Claude-Code) — run scripts/sync-readme.sh"
+  fi
+fi
+
+HERO_FOUND=""
+for hero in docs/hero.gif docs/hero.svg docs/hero.webm docs/hero.png; do
+  [[ -f "$PLUGIN_DIR/$hero" ]] && HERO_FOUND="$hero" && break
+done
+if [[ -n "$HERO_FOUND" ]]; then
+  ok "hero asset present: $HERO_FOUND"
+else
+  warn "no hero asset in docs/ — run scripts/record-demo.sh (VHS → hero.gif) or scripts/generate-wordmark.sh (SVG fallback)"
+fi
+
+# Remote repo topics — only check if we have a repo URL and gh is installed.
+if [[ "$OFFLINE" != "--offline" ]] && command -v gh >/dev/null 2>&1 && [[ -n "$REPOSITORY" ]]; then
+  REPO_SLUG=$(echo "$REPOSITORY" \
+    | sed -E 's#^https?://github\.com/##; s#^git@github\.com:##; s#\.git$##; s#^/+##; s#/+$##')
+  if [[ "$REPO_SLUG" == */* ]]; then
+    REMOTE_TOPICS=$(gh repo view "$REPO_SLUG" --json repositoryTopics -q '.repositoryTopics[].name' 2>/dev/null || true)
+    if [[ -z "$REMOTE_TOPICS" ]]; then
+      warn "remote repo $REPO_SLUG has no topics set — run scripts/publish-to-github.sh to sync metadata"
+    else
+      REMOTE_TOPIC_COUNT=$(echo "$REMOTE_TOPICS" | wc -l | tr -d ' ')
+      ok "remote repo has $REMOTE_TOPIC_COUNT topic(s) set"
+    fi
+  fi
 fi
 
 # ---------- Summary ----------
 echo
 echo "==> Summary: $ERRORS error(s), $WARNINGS warning(s)"
+
+# ---------- Status mode: phase-grouped report, exit 0, skip submission handoff ----------
+# Reuses all state gathered above (NAME, VERSION, EXAMPLE_LINES, VALIDATE_OK, ...).
+# Emits either a table (default) or a one-line banner (--quiet for SessionStart hooks).
+if [[ -n "$STATUS_MODE" ]]; then
+  # --- Compute per-phase verdict ---
+  # Each phase gets a status char:
+  #   ✓ = complete   ⚠ = partial / unverified   ✗ = incomplete
+  PHASE2_MISSING=()
+  [[ ! -f "$MANIFEST"     ]] && PHASE2_MISSING+=("plugin.json")
+  [[ ! -f "$README"       ]] && PHASE2_MISSING+=("README.md")
+  [[ ! -f "$LICENSE_FILE" ]] && PHASE2_MISSING+=("LICENSE")
+  [[ ! -f "$CLAUDE_MD"    ]] && PHASE2_MISSING+=("CLAUDE.md")
+  if [[ ${#PHASE2_MISSING[@]} -eq 0 ]]; then
+    PHASE2_STATUS="✓"; PHASE2_NOTE="manifest + README + LICENSE + CLAUDE.md present"
+  elif [[ -f "$MANIFEST" && -f "$README" ]]; then
+    PHASE2_STATUS="⚠"; PHASE2_NOTE="missing ${PHASE2_MISSING[*]}"
+  else
+    PHASE2_STATUS="✗"; PHASE2_NOTE="scaffold incomplete — missing ${PHASE2_MISSING[*]}"
+  fi
+
+  COMPONENT_COUNT=0
+  for d in skills agents hooks monitors bin; do
+    if [[ -d "$PLUGIN_DIR/$d" ]] && [[ -n "$(ls -A "$PLUGIN_DIR/$d" 2>/dev/null)" ]]; then
+      COMPONENT_COUNT=$((COMPONENT_COUNT+1))
+    fi
+  done
+  for f in .mcp.json .lsp.json settings.json; do
+    [[ -f "$PLUGIN_DIR/$f" ]] && COMPONENT_COUNT=$((COMPONENT_COUNT+1))
+  done
+  if [[ "$COMPONENT_COUNT" -ge 1 ]]; then
+    PHASE3_STATUS="✓"; PHASE3_NOTE="$COMPONENT_COUNT component type(s) wired"
+  else
+    PHASE3_STATUS="✗"; PHASE3_NOTE="no components — plugin is manifest-only"
+  fi
+
+  if [[ -n "$VALIDATE_OK" ]]; then
+    PHASE4_STATUS="⚠"; PHASE4_NOTE="validate passed (runtime test status unknown — confirm with --plugin-dir)"
+  else
+    PHASE4_STATUS="✗"; PHASE4_NOTE="claude plugin validate did not pass"
+  fi
+
+  EXAMPLE_LINES_VAL="${EXAMPLE_LINES:-0}"
+  if [[ -n "$EXAMPLES_BLOCK" && "$EXAMPLE_LINES_VAL" -ge 2 ]]; then
+    PHASE5_STATUS="✓"; PHASE5_NOTE="README Examples section with $EXAMPLE_LINES_VAL example(s)"
+  elif [[ -n "$EXAMPLES_BLOCK" ]]; then
+    PHASE5_STATUS="⚠"; PHASE5_NOTE="README has Examples heading but only $EXAMPLE_LINES_VAL example line(s) — need ≥2"
+  else
+    PHASE5_STATUS="✗"; PHASE5_NOTE="README missing Examples section"
+  fi
+
+  # Phase 6 (Host): git remote exists; online probe optional.
+  PHASE6_STATUS="✗"; PHASE6_NOTE="no git remote — not pushed yet"
+  if (cd "$PLUGIN_DIR" 2>/dev/null && git remote get-url origin >/dev/null 2>&1); then
+    REMOTE_URL=$(cd "$PLUGIN_DIR" && git remote get-url origin 2>/dev/null || true)
+    PHASE6_STATUS="⚠"; PHASE6_NOTE="git remote set ($REMOTE_URL) — install path not yet verified"
+    if [[ "$OFFLINE" != "--offline" ]] && command -v curl >/dev/null 2>&1 && [[ -n "$REPOSITORY" ]]; then
+      if curl -fsI --max-time 5 "$REPOSITORY" >/dev/null 2>&1; then
+        PHASE6_STATUS="✓"; PHASE6_NOTE="repo URL $REPOSITORY is reachable"
+      fi
+    fi
+  fi
+
+  # Phase 7 (Submit): classic mode would exit nonzero for any ERRORS; use that
+  # as the submission gate signal.
+  if [[ "$ERRORS" -eq 0 ]]; then
+    PHASE7_STATUS="✓"; PHASE7_NOTE="all submission checks pass — ready to submit"
+  else
+    PHASE7_STATUS="✗"; PHASE7_NOTE="$ERRORS blocking error(s) — see trace above"
+  fi
+
+  # --- Find the first truly-blocked phase (for resume hint + quiet banner) ---
+  # Quiet banner only flags ✗ (truly incomplete). ⚠ means partial/unverified
+  # (e.g., validate passed but runtime test can't be detected) — nagging on
+  # those every session would be noise. The full table still shows ⚠ phases.
+  FIRST_BLOCKED=""
+  FIRST_BLOCKED_NOTE=""
+  FIRST_PARTIAL=""
+  FIRST_PARTIAL_NOTE=""
+  for pair in "2|$PHASE2_STATUS|$PHASE2_NOTE" "3|$PHASE3_STATUS|$PHASE3_NOTE" "4|$PHASE4_STATUS|$PHASE4_NOTE" "5|$PHASE5_STATUS|$PHASE5_NOTE" "6|$PHASE6_STATUS|$PHASE6_NOTE" "7|$PHASE7_STATUS|$PHASE7_NOTE"; do
+    PH_NUM="${pair%%|*}"; REST="${pair#*|}"; PH_STATUS="${REST%%|*}"; PH_NOTE="${REST#*|}"
+    if [[ "$PH_STATUS" == "✗" && -z "$FIRST_BLOCKED" ]]; then
+      FIRST_BLOCKED="$PH_NUM"
+      FIRST_BLOCKED_NOTE="$PH_NOTE"
+    fi
+    if [[ "$PH_STATUS" == "⚠" && -z "$FIRST_PARTIAL" ]]; then
+      FIRST_PARTIAL="$PH_NUM"
+      FIRST_PARTIAL_NOTE="$PH_NOTE"
+    fi
+  done
+
+  if [[ -n "$QUIET_MODE" ]]; then
+    # SessionStart hook: silence-is-golden on clean plugins. Only speak up on ✗.
+    if [[ -n "$FIRST_BLOCKED" ]]; then
+      command echo "create-claude-plugin: ${NAME:-<unnamed>} v${VERSION:-?} — Phase $FIRST_BLOCKED incomplete ($FIRST_BLOCKED_NOTE). Ask: 'what's left on my plugin?'"
+    fi
+    exit 0
+  fi
+
+  # Non-quiet status mode: report both the first blocked AND the first partial,
+  # since the user asked for a full report.
+  FIRST_INCOMPLETE="${FIRST_BLOCKED:-$FIRST_PARTIAL}"
+  FIRST_INCOMPLETE_NOTE="${FIRST_BLOCKED_NOTE:-$FIRST_PARTIAL_NOTE}"
+
+  cat <<EOF
+
+================================================================
+PHASE STATUS for ${NAME:-<unnamed>} v${VERSION:-?}
+(7-phase model from create-claude-plugin skill)
+================================================================
+
+  Phase 2 — Scaffold        $PHASE2_STATUS  $PHASE2_NOTE
+  Phase 3 — Build           $PHASE3_STATUS  $PHASE3_NOTE
+  Phase 4 — Test locally    $PHASE4_STATUS  $PHASE4_NOTE
+  Phase 5 — Document        $PHASE5_STATUS  $PHASE5_NOTE
+  Phase 6 — Host            $PHASE6_STATUS  $PHASE6_NOTE
+  Phase 7 — Submit          $PHASE7_STATUS  $PHASE7_NOTE
+
+EOF
+  if [[ -n "$FIRST_INCOMPLETE" ]]; then
+    command echo "Pick up at Phase $FIRST_INCOMPLETE: $FIRST_INCOMPLETE_NOTE"
+  else
+    command echo "All phases complete. Run without --status to open the submission form."
+  fi
+  command echo "================================================================"
+  exit 0
+fi
+
 if [[ "$ERRORS" -gt 0 ]]; then
   echo "Fix the errors above before submitting." >&2
   exit 1
@@ -361,7 +612,12 @@ elif [[ -z "$NO_OPEN" && "$OSTYPE" != "darwin"* ]]; then
   echo "Automated handoff skipped: non-macOS (\$OSTYPE=$OSTYPE). Open $SUBMIT_URL manually."
 fi
 
-# ---------- Optional: paste-ready Cowork test prompt for Claude Code Computer Use ----------
+# ---------- Optional: self-driving Cowork onboarding prompt ----------
+# Emits a paste-ready prompt that walks the user through enabling computer-use,
+# granting macOS perms, installing the plugin in Cowork, running a test prompt,
+# and unlocking the Cowork gate — all from a single paste. Designed to hand-hold
+# the user through every consent boundary so they finish setup instead of
+# dropping off halfway.
 if [[ "$PRINT_COWORK_PROMPT" == "yes" ]]; then
   # Pick a test prompt: prefer the first ">" quoted line in README's Usage section, else fallback
   TEST_PROMPT=$(awk '/^## +Usage/{flag=1; next} flag && /^## /{exit} flag' "$README" 2>/dev/null \
@@ -372,24 +628,92 @@ if [[ "$PRINT_COWORK_PROMPT" == "yes" ]]; then
   cat <<EOF
 
 ================================================================
-COWORK TEST PROMPT — paste into an INTERACTIVE Claude Code session
-(prereqs: macOS, Pro/Max, Claude Code ≥ v2.1.85, /mcp → enable
-'computer-use', then grant macOS Accessibility + Screen Recording)
+COWORK SMOKE-TEST — paste into an INTERACTIVE Claude Code session
+(macOS, Pro/Max, Claude Code ≥ v2.1.85)
 ================================================================
 
-Open the Claude desktop app and switch to the Cowork tab. Click
-Customize → Browse plugins. If "${NAME}" appears in the marketplace,
-install it from there; otherwise zip the directory at
-'${ABS_PLUGIN_DIR}' and upload the .zip via the same UI.
+You are onboarding the user through a one-time Cowork smoke-test
+of their plugin "${NAME}". Goal: they finish with Cowork tested —
+no drop-off. Hand-hold at every step. Confirm before each consent
+boundary. If a step fails twice, stop and ask — don't loop.
 
-Once installed, start a Cowork session and run this test prompt:
+PLUGIN:       ${NAME}
+PLUGIN PATH:  ${ABS_PLUGIN_DIR}
+TEST PROMPT:  ${TEST_PROMPT}
+
+--- Start ---
+Tell the user: "I'll test ${NAME} in Cowork for you. Five steps,
+~2 minutes. I'll stop at each permission gate. Ready?" Wait for
+their confirmation before proceeding.
+
+--- STEP 1: Verify Computer Use is enabled ---
+Try calling mcp__computer-use__list_granted_applications.
+  - Works → say "Computer Use is on." Skip to STEP 2.
+  - Tool not found → say: "One-time setup, ~30 seconds. Run /mcp,
+    find 'computer-use' in the list, press Enter to toggle it ON,
+    then come back. I'll wait."
+    When they're back, retry this step.
+
+--- STEP 2: Grant macOS permissions ---
+Call mcp__computer-use__request_access with ["Claude"].
+If not granted, guide the user:
+  "macOS needs two permissions for this:
+     - Accessibility (so I can click and type)
+     - Screen Recording (so I can take screenshots)
+   Open System Settings → Privacy & Security, find each one,
+   flip the Claude Code switch ON. If macOS asks you to restart
+   Claude Code, do it — I'll still be here."
+Take a test screenshot to confirm. Retry request_access if
+needed. Don't skip — the rest of the flow depends on this.
+
+--- STEP 3: Install the plugin in Cowork ---
+Call mcp__computer-use__open_application with "Claude".
+Screenshot. Find and click the Cowork tab (tell the user where
+you're clicking so they can follow along).
+
+In Cowork:
+  1. Click Customize.
+  2. Click Browse plugins.
+  3. If "${NAME}" appears in the marketplace, click Install.
+     Otherwise say: "Please zip the folder at
+     '${ABS_PLUGIN_DIR}' and drag the .zip onto this window.
+     I'll wait." When the upload appears, confirm install.
+  4. Screenshot the installed state. Confirm "${NAME}" is listed.
+
+--- STEP 4: Run the test prompt ---
+Start a new Cowork session (screenshot → click the new-session
+button). Paste (or type) this exact prompt:
 
   ${TEST_PROMPT}
 
-Verify the plugin's main skill responds as described in its README.
-Screenshot any errors. Report whether the smoke test passed.
+Wait for the response. Screenshot it.
 
-If it passed, I will run: export COWORK_TESTED=yes
+--- STEP 5: Report + unlock the gate ---
+Tell the user:
+  - Which skill/agent fired (or didn't)
+  - Any errors observed
+  - A one-line pass/fail verdict
+
+If it PASSED, run this via the Bash tool to unlock the Cowork
+checkbox on the submission form:
+
+  COWORK_TESTED=yes ${CLAUDE_PLUGIN_ROOT:-.}/scripts/check-submission.sh "${ABS_PLUGIN_DIR}" --no-open
+
+Then tell the user: "Cowork gate unlocked. You can check the
+Cowork box on the submission form."
+
+If it FAILED, help the user interpret the error. Offer to debug
+or to leave Cowork unchecked on the submission form (that's a
+valid outcome — claiming untested support is worse than passing
+on the checkbox).
+
+--- Rules ---
+- Always ask before: enabling an MCP, granting access, installing,
+  running the test prompt.
+- If a step fails twice, stop and ask the user — don't retry blindly.
+- The user can press Esc at any time to abort.
+- Retention matters — if they seem confused, re-explain more slowly,
+  don't bail.
 ================================================================
 EOF
 fi

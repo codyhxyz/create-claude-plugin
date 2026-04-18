@@ -1,6 +1,6 @@
 ---
 name: create-claude-plugin
-description: Use when the user wants to create, package, or publish a Claude Code plugin — including converting a personal `.claude/` config into a shareable plugin, adding a marketplace, hosting on GitHub, or submitting to the official Anthropic plugin marketplace. Triggers on phrases like "make a Claude plugin", "package this skill", "publish to the Claude store", "claude-plugin-official", "/plugin marketplace add", or any request to scaffold, distribute, or submit a Claude Code plugin end-to-end.
+description: Use when the user wants to create, package, publish, resume mid-development, or check the status of a Claude Code plugin — including converting a personal `.claude/` config into a shareable plugin, adding a marketplace, hosting on GitHub, submitting to the official Anthropic plugin marketplace, picking up a plugin scaffolded in an earlier session, or shipping an update to an already-published plugin. Triggers on phrases like "make a Claude plugin", "package this skill", "publish to the Claude store", "claude-plugin-official", "/plugin marketplace add", "what's left on my plugin", "plugin status", "am I ready to submit", "resume my plugin", "ship an update", or any request to scaffold, develop, distribute, or submit a Claude Code plugin.
 ---
 
 # Create a Claude Code Plugin (end-to-end)
@@ -19,6 +19,7 @@ A Claude Code plugin is a self-contained directory with a `.claude-plugin/plugin
 - User wants to add a marketplace.json so their repo is installable via `/plugin marketplace add`
 - User is ready to submit to `claude-plugins-official`
 - User wants to ship an **update** to an already-published plugin (see Phase 0)
+- User is **resuming mid-development** on a plugin scaffolded in a prior session — "what's left", "status", "am I ready to submit" (see Phase 0)
 
 **When NOT to use:**
 - Personal-only customization with no intent to share → use `~/.claude/` directly. Plugins add namespacing overhead (`/my-plugin:hello` instead of `/hello`); skip them for solo work.
@@ -30,12 +31,13 @@ Run them in order. Each phase has a deliverable. Don't skip — phase N's output
 
 | # | Phase | Deliverable |
 |---|---|---|
-| 0 | **Existing plugin?** | If so, skip scaffolding — branch into the update flow |
+| 0 | **Existing plugin?** | If so, skip scaffolding — branch into the resume-or-update flow |
 | 1 | **Decide** | Plugin or standalone? Which components? |
 | 2 | **Scaffold** | Directory + `plugin.json` + `marketplace.json` + LICENSE + README stub |
 | 3 | **Build** | Skills/agents/hooks/etc. wired in correct locations |
 | 4 | **Test locally** | `claude --plugin-dir <path>` + `/reload-plugins` + `claude plugin validate .` all green |
 | 5 | **Document** | README with install + usage + examples; CHANGELOG with v0.1.0 |
+| 5.5 | **Draft marketing copy** | Supply-side README (replaces Phase 5 stub) + `MARKETING.md` with launch tweet |
 | 6 | **Host & make installable** | Push to GitHub; verify `/plugin marketplace add owner/repo` works |
 | 7 | **Submit to official store** | Run `check-submission.sh`, fill the form |
 
@@ -43,7 +45,25 @@ Run them in order. Each phase has a deliverable. Don't skip — phase N's output
 
 ## Phase 0: Is this an existing plugin?
 
-If the user already has a `.claude-plugin/plugin.json` in the target directory, **skip Phases 1–3** and run the update flow instead:
+If the user already has a `.claude-plugin/plugin.json` in the target directory, **skip Phases 1–3** and branch based on state:
+
+### 0a — Resume mid-development (scaffolded, not yet published)
+
+Signs you're here: no git remote, or repo exists but plugin is not yet on `claude-plugins-official`. The user is asking *"what's left"*, *"what's my status"*, *"am I ready to submit"*, or just picking up work from a prior session.
+
+**Get a phase-grouped status report** — this is the only step that matters at the top of Phase 0a:
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/check-submission.sh "<plugin-path>" --status
+```
+
+The `--status` mode is tolerant of incomplete state (exit 0 even with gaps) and groups output by the 7 phases. Read the output, pick up from the **first incomplete phase**, and continue forward. Don't restart Phase 1 or Phase 2 — the scaffolding already ran.
+
+If the user's CLAUDE.md is missing from the plugin root, add it (Phase 2's copy list includes it now) — that file is what future sessions will read to stay grounded in the project's rules.
+
+### 0b — Update an already-published plugin
+
+Signs you're here: plugin is in `claude-plugins-official` OR the user explicitly says "ship an update" / "release v0.X.Y".
 
 1. **Bump `version`** in `.claude-plugin/plugin.json` per semver (patch = fix, minor = new feature, major = breaking). Set in only one place — `plugin.json` always wins over `marketplace.json` silently.
 2. **Add a CHANGELOG entry** at the top of `CHANGELOG.md`: new version heading, today's date (`date +%Y-%m-%d`), summary of changes. Keep the prior entries; don't rewrite history.
@@ -55,7 +75,7 @@ If the user already has a `.claude-plugin/plugin.json` in the target directory, 
 4. **Push the update.** Commit, tag the new version (`git tag v<x.y.z> && git push --tags`), and push. Users running `/plugin install` will pick up the new version on refresh.
 5. **If the plugin is already in `claude-plugins-official`, re-submit.** Anthropic reviews updates separately — the official marketplace doesn't auto-pull new tags. Re-run Phase 7 with the new version.
 
-Updates skip scaffolding + component decisions but still go through Phases 4 (test), 5 (doc), 6 (host), and 7 (submit, if applicable).
+Both sub-phases skip scaffolding + component decisions but still go through Phases 4 (test), 5 (doc), 6 (host), and 7 (submit, if applicable).
 
 ---
 
@@ -100,6 +120,7 @@ my-plugin/
 │   └── marketplace.json    # makes the repo a single-plugin marketplace
 ├── skills/                 # at root, NOT inside .claude-plugin/
 ├── agents/                 # at root
+├── CLAUDE.md               # project-local rules — auto-read by every session
 ├── README.md
 ├── LICENSE
 ├── CHANGELOG.md
@@ -113,6 +134,9 @@ Copy from `templates/`:
 - `templates/plugin/LICENSE` → `LICENSE` (MIT; update year + name)
 - `templates/plugin/CHANGELOG.md` → `CHANGELOG.md`
 - `templates/plugin/.gitignore` → `.gitignore`
+- `templates/plugin/CLAUDE.md` → `CLAUDE.md` at the **plugin root** (replace the `PLUGIN_NAME` placeholder on line 1). This file is what every future session in the repo reads automatically — it's how the plugin's standards survive across days and sessions without the user re-invoking this skill. Do not skip it.
+- `templates/plugin/.github/` → `.github/` (issue forms, PR template, `CONTRIBUTING.md`). Substitute `PLUGIN_NAME` and `YOUR_GH_USER` in `CONTRIBUTING.md`.
+- `templates/plugin/docs/demo.tape` → `docs/demo.tape`. Customize the middle block for your demo; render later with `${CLAUDE_PLUGIN_ROOT}/scripts/record-demo.sh` to produce `docs/hero.gif`.
 
 **Naming:** Name must be kebab-case and not reserved or Anthropic-impersonating. See `reference/marketplace-manifest.md` § "Reserved marketplace names" for the full list. Skills are namespaced `/<plugin-name>:<skill-name>` — pick a name that reads well there.
 
@@ -164,12 +188,17 @@ Common issues: components inside `.claude-plugin/` (move up to root), hook scrip
 
 ### 4b — Claude Cowork
 
-Cowork has no CLI. Two paths, both covered in detail in `reference/cowork-testing.md`:
+Cowork has no CLI. Claude Code's built-in `computer-use` MCP drives the desktop app end-to-end — installs the plugin, runs your test prompt, screenshots errors. Prereqs: macOS, Pro/Max, Claude Code v2.1.85+.
 
-- **Path A — manual:** Claude desktop → Cowork tab → Customize → Browse plugins → install or `.zip` upload → smoke-test.
-- **Path B — semi-automated:** Claude Code's `computer-use` MCP drives the desktop app (macOS + Pro/Max only).
+One command, then paste into an interactive Claude Code session:
 
-**Don't claim Cowork support on the submission form unless you've actually tested it.** `check-submission.sh` blocks the Cowork checkbox unless `COWORK_TESTED=yes` is set in the environment.
+```bash
+${CLAUDE_PLUGIN_ROOT}/scripts/check-submission.sh "<plugin-path>" --print-cowork-prompt
+```
+
+The printed prompt is a **self-driving onboarding script**: it verifies `computer-use` is enabled (walks the user through `/mcp` → toggle ON if not), requests macOS Accessibility + Screen Recording permissions, installs the plugin in Cowork, runs the test prompt, screenshots the result, and — on pass — auto-runs `COWORK_TESTED=yes ./scripts/check-submission.sh` to unlock the submission gate. It stops for explicit user confirmation at each consent boundary.
+
+Full protocol + manual fallback for non-macOS / Free users: `reference/cowork-testing.md`.
 
 ---
 
@@ -189,6 +218,50 @@ Bump `version` in `plugin.json` (start at `0.1.0`).
 
 **For the submission form**, your README needs an "## Examples" or "## Example use cases" section — `check-submission.sh` looks for it.
 
+What you write here is a utilitarian template-fill — it'll pass validation but it reads like a spec sheet. **Phase 5.5 will upgrade it to supply-side copy** before the GitHub push, so don't agonize over wording in this phase.
+
+---
+
+## Phase 5.5: Draft marketing copy
+
+Between documentation and hosting, draft marketing-grade copy. A README that reads as a spec sheet is the single biggest reason good plugins don't land. Run this by default; let the user opt out.
+
+**Load `reference/marketing-copy.md` before drafting.** It covers supply-side principles, anti-patterns (no "comprehensive", no "simply", no emoji headers), and the tagline + tweet rubrics. Don't draft without it.
+
+### Steps
+
+1. **Read the plugin's current state** — `.claude-plugin/plugin.json`, the component list, and the example interactions written in Phase 5. You need these to ground the copy in what the plugin actually does.
+2. **Draft a supply-side README.** Required sections in order:
+   - **Tagline** — one sentence under the title, category + unique move, no superlatives
+   - **Before → After** — concrete, user-voiced. Quoted pain in Before; chained end-states in After
+   - **What you walk away with** — outcomes, not artifacts. If a bullet names a filename, rewrite it as a result
+   - **Demo** — placeholder ok. Customize the scaffolded `docs/demo.tape` and run `${CLAUDE_PLUGIN_ROOT}/scripts/record-demo.sh` to produce `docs/hero.gif`. If VHS isn't installed, the script falls back to `scripts/generate-wordmark.sh` (SVG). Flag with `<!-- TODO: demo GIF — see docs/demo.tape -->` if you're deferring.
+   - **Examples** — real before/after scenarios (keep or adapt the Phase 5 examples)
+   - **Install**
+   - **Usage**
+   - **Why this exists** — the unmet need; what the plugin *won't* do
+3. **Draft a launch tweet** (≤280 chars): hook in first 10 words, one concrete outcome, one link, no hashtag spam, max 1 emoji. Use `@you` as a placeholder for the author handle — don't ask the user for theirs; that's feature creep.
+4. **Optionally draft 2–3 alt tweets** with different hooks.
+5. **Present both via `AskUserQuestion`** with four options:
+   - *"Ship as-is"* — write README to plugin root (overwriting the Phase 5 template-fill), copy `templates/plugin/MARKETING.md` to plugin root and fill in `## Launch tweet` + `## Alt tweets`
+   - *"Revise"* — take free-text feedback, regenerate, re-present. Cap at 3 rounds; after the 3rd, ship whatever's current
+   - *"Draft og-card now"* — ship the README + tweet, then **invoke the `og-card` skill** to generate a 1200×630 social-preview PNG at `<plugin>/assets/og.png`. Returns here on completion
+   - *"Skip"* — keep the Phase 5 template-fill README, don't create `MARKETING.md`, continue to Phase 6
+6. **Before writing: grep the draft for banned strings** — `simply`, `easily`, `comprehensive`, `everything you need`, `a suite of`. If any appear, rewrite before presenting to the user.
+
+### If a README already exists (update flow or pre-populated)
+
+Don't auto-overwrite. Present the draft **alongside a diff and the reasoning**: which supply-side markers are missing in the existing README, which outcomes aren't surfaced, why the new tagline is stronger. User decides whether to accept, merge selectively, or reject. Make the case; the user makes the call.
+
+### Non-goals for this phase
+
+- Posting the tweet — output is a draft, user ships it
+- Storing the user's Twitter handle — `@you` stays as a placeholder
+- Show HN / Product Hunt / Reddit post drafts — out of scope
+- More than 3 alt tweets
+
+OG-card generation is opt-in via the *"Draft og-card now"* option; it delegates to the `og-card` sibling skill.
+
 ---
 
 ## Phase 6: Host & make installable
@@ -199,7 +272,12 @@ Push to GitHub using the helper script (idempotent — safe to re-run on updates
 ${CLAUDE_PLUGIN_ROOT}/scripts/publish-to-github.sh "<plugin-path>"
 ```
 
-The script reads `.claude-plugin/plugin.json` for name, description, and homepage; auto-detects topics from the component layout (`claude-skill` if `skills/` exists, etc.) + manifest `keywords`; creates the repo if it doesn't exist; and always runs `gh repo edit` to sync metadata.
+The script reads `.claude-plugin/plugin.json` as the single source of truth. In one idempotent pass it:
+
+1. Creates the repo (or pushes the current branch if it already exists).
+2. Runs `gh repo edit` to sync description, homepage, and topics. Topics = baseline (`claude-code`, `claude-code-plugin`, `claude-plugin`) + auto-detected from layout (`skills/` → `claude-skill`, `agents/` → `claude-agent`, `hooks/` → `claude-hook`, `.mcp.json` → `mcp`) + manifest `keywords`.
+3. Tags `v<version>` and cuts a GitHub release from the matching `CHANGELOG.md` entry (skip with `CCP_SKIP_RELEASE=1`).
+4. Opens or refreshes a PR against `codyhxyz/claude-plugins` adding this plugin to the meta-marketplace, so users `/plugin marketplace add codyhxyz/claude-plugins` once and install any listed plugin (skip with `CCP_SKIP_REGISTRY=1`; override registry with `CCP_REGISTRY_REPO=owner/repo`).
 
 Once pushed, anyone can install with:
 
@@ -246,6 +324,8 @@ Submit at **https://claude.ai/settings/plugins/submit** (or **https://platform.c
 | Install from a local marketplace | `/plugin marketplace add ./my-plugin` |
 | Install from GitHub | `/plugin marketplace add owner/repo` |
 | Publish to GitHub (idempotent) | `${CLAUDE_PLUGIN_ROOT}/scripts/publish-to-github.sh "<plugin-path>"` |
+| Sync README badges + install block from `plugin.json` | `${CLAUDE_PLUGIN_ROOT}/scripts/sync-readme.sh "<plugin-path>"` |
+| Record hero GIF (VHS; falls back to SVG wordmark) | `${CLAUDE_PLUGIN_ROOT}/scripts/record-demo.sh "<plugin-path>"` |
 | Pre-flight the submission (model invokes via Bash) | `${CLAUDE_PLUGIN_ROOT}/scripts/check-submission.sh "<plugin-path>"` |
 | Submit to official store | https://claude.ai/settings/plugins/submit |
 
@@ -262,6 +342,7 @@ Submit at **https://claude.ai/settings/plugins/submit** (or **https://platform.c
 | Bumped code without bumping version | Existing users won't see updates due to caching. Always bump the version when you change behavior. |
 | Tried to use `hooks` / `mcpServers` / `permissionMode` in a plugin agent | Not supported in plugin agents (security restriction). |
 | Reserved or impersonating name | See `reference/marketplace-manifest.md` § Reserved marketplace names. |
+| No `CLAUDE.md` at the plugin root | Copy `templates/plugin/CLAUDE.md` in. Without it, sessions opened in the plugin dir after scaffolding day lose all project grounding — Claude won't know the directory invariants, path rules, or manifest rules. |
 
 ## Red flags — you're doing it wrong
 
@@ -280,6 +361,8 @@ Submit at **https://claude.ai/settings/plugins/submit** (or **https://platform.c
 | `reference/marketplace-manifest.md` | Building `marketplace.json`; reserved-name + kebab-case rules |
 | `reference/component-types.md` | Picking a component type, debugging, or confirming root-vs-`.claude-plugin/` layout |
 | `reference/hosting-options.md` | Hosting somewhere other than GitHub |
+| `reference/marketing-copy.md` | Phase 5.5 — drafting supply-side README + launch tweet; anti-pattern list |
+| `../og-card/SKILL.md` | Phase 5.5 option *"Draft og-card now"* — interview + render 1200×630 social-preview PNG |
 | `reference/cowork-testing.md` | Phase 4b — manual + Computer Use paths |
 | `reference/submission-form.md` | Submission form fields in detail |
 | `reference/phase7-handoff.md` | Full Phase 7 protocol (AskUserQuestion text, form grouping) |

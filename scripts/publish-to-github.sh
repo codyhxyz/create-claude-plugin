@@ -3,8 +3,8 @@
 #
 # Usage:  ./publish-to-github.sh <plugin-dir> [--owner <gh-owner>] [--private]
 #
-# Reads <plugin-dir>/.claude-plugin/plugin.json for name, description, and
-# homepage. Auto-detects topics:
+# Reads <plugin-dir>/.claude-plugin/plugin.json for name, description,
+# homepage, and version. Auto-detects topics:
 #   - baseline: claude-code, claude-code-plugin, claude-plugin
 #   - component-type: claude-skill (skills/), claude-agent (agents/),
 #                     claude-hook (hooks/), mcp (.mcp.json)
@@ -15,7 +15,18 @@
 # to `gh repo edit`. In all cases, `gh repo edit` is run to sync description,
 # homepage, and topics.
 #
-# Prereqs: gh (authenticated), jq.
+# After metadata sync, if plugin.json version doesn't match an existing tag:
+# tag v<version>, push, cut a GitHub release from the matching CHANGELOG entry.
+#
+# Finally, open (or update) a PR against the meta-marketplace registry
+# (default: codyhxyz/claude-plugins) adding this plugin's entry.
+#
+# Env:
+#   CCP_REGISTRY_REPO   override registry (default: codyhxyz/claude-plugins)
+#   CCP_SKIP_REGISTRY=1 skip the registry PR step
+#   CCP_SKIP_RELEASE=1  skip tagging + gh release
+#
+# Prereqs: gh (authenticated), jq, git.
 
 set -euo pipefail
 
@@ -50,9 +61,11 @@ MANIFEST="$PLUGIN_DIR/.claude-plugin/plugin.json"
 NAME=$(jq -r '.name // empty' "$MANIFEST")
 DESCRIPTION=$(jq -r '.description // empty' "$MANIFEST")
 HOMEPAGE=$(jq -r '.homepage // empty' "$MANIFEST")
+VERSION=$(jq -r '.version // empty' "$MANIFEST")
 
 [[ -z "$NAME" ]]        && { echo "ERROR: plugin.json missing 'name'" >&2; exit 1; }
 [[ -z "$DESCRIPTION" ]] && { echo "ERROR: plugin.json missing 'description'" >&2; exit 1; }
+[[ -z "$VERSION" ]]     && { echo "ERROR: plugin.json missing 'version'" >&2; exit 1; }
 
 # Resolve owner: --owner flag wins, else the authed gh user
 if [[ -z "$OWNER" ]]; then
@@ -107,5 +120,125 @@ EDIT_ARGS=(--description "$DESCRIPTION")
 for t in "${UNIQ_TOPICS[@]}"; do EDIT_ARGS+=(--add-topic "$t"); done
 gh repo edit "$SLUG" "${EDIT_ARGS[@]}"
 
-echo "==> Done: https://github.com/$SLUG"
+echo "==> Repo metadata synced: https://github.com/$SLUG"
 echo "    Topics: ${UNIQ_TOPICS[*]}"
+
+# ---------- Tag + release ----------
+if [[ "${CCP_SKIP_RELEASE:-}" == "1" ]]; then
+  echo "==> CCP_SKIP_RELEASE=1 — skipping tag + release"
+else
+  TAG="v$VERSION"
+  if (cd "$PLUGIN_DIR" && git rev-parse --verify "refs/tags/$TAG" >/dev/null 2>&1); then
+    echo "==> Tag $TAG already exists locally — skipping"
+  else
+    # Pull the matching CHANGELOG block if present. Tolerates both
+    # "## [0.1.0] — YYYY-MM-DD" and "## 0.1.0" heading styles.
+    NOTES=""
+    if [[ -f "$PLUGIN_DIR/CHANGELOG.md" ]]; then
+      NOTES=$(awk -v ver="$VERSION" '
+        BEGIN { grab=0 }
+        $0 ~ "^## +\\[?" ver "\\]?" { grab=1; next }
+        grab && /^## / { exit }
+        grab { print }
+      ' "$PLUGIN_DIR/CHANGELOG.md" | sed -e '/^[[:space:]]*$/d')
+    fi
+    [[ -z "$NOTES" ]] && NOTES="Release $TAG"
+
+    (cd "$PLUGIN_DIR" && git tag -a "$TAG" -m "$TAG" && git push origin "$TAG")
+
+    if gh release view "$TAG" --repo "$SLUG" >/dev/null 2>&1; then
+      echo "==> Release $TAG already exists on $SLUG — skipping gh release create"
+    else
+      gh release create "$TAG" --repo "$SLUG" --title "$TAG" --notes "$NOTES"
+      echo "==> Cut release $TAG on $SLUG"
+    fi
+  fi
+fi
+
+# ---------- Meta-marketplace auto-PR ----------
+REGISTRY_REPO="${CCP_REGISTRY_REPO:-codyhxyz/claude-plugins}"
+
+if [[ "${CCP_SKIP_REGISTRY:-}" == "1" ]]; then
+  echo "==> CCP_SKIP_REGISTRY=1 — skipping registry PR"
+  exit 0
+fi
+if [[ "$SLUG" == "$REGISTRY_REPO" ]]; then
+  echo "==> This IS the registry repo — skipping self-PR"
+  exit 0
+fi
+
+echo "==> Updating $REGISTRY_REPO with entry for $NAME"
+REG_TMP=$(mktemp -d -t ccp-registry.XXXXXX)
+trap 'rm -rf "$REG_TMP"' EXIT
+
+if ! gh repo clone "$REGISTRY_REPO" "$REG_TMP" -- --depth 1 --quiet >/dev/null 2>&1; then
+  echo "    could not clone $REGISTRY_REPO — skipping registry PR (set CCP_SKIP_REGISTRY=1 to silence)" >&2
+  exit 0
+fi
+
+REG_MANIFEST="$REG_TMP/.claude-plugin/marketplace.json"
+if [[ ! -f "$REG_MANIFEST" ]]; then
+  echo "    $REGISTRY_REPO has no .claude-plugin/marketplace.json — skipping" >&2
+  exit 0
+fi
+
+# Entry we want in the registry. Keywords come straight from plugin.json.
+ENTRY=$(jq -n \
+  --arg name        "$NAME" \
+  --arg description "$DESCRIPTION" \
+  --arg homepage    "$HOMEPAGE" \
+  --arg repo        "$SLUG" \
+  --slurpfile kw    <(jq '[.keywords[]? // empty]' "$MANIFEST") \
+  '{
+    name: $name,
+    source: {source:"github", repo:$repo},
+    description: $description,
+    homepage: (if $homepage == "" then null else $homepage end),
+    repository: ("https://github.com/" + $repo),
+    keywords: ($kw[0] // [])
+  } | with_entries(select(.value != null))')
+
+EXISTING=$(jq --arg n "$NAME" '.plugins[] | select(.name == $n)' "$REG_MANIFEST")
+if [[ -n "$EXISTING" ]] && diff <(echo "$EXISTING" | jq -S .) <(echo "$ENTRY" | jq -S .) >/dev/null 2>&1; then
+  echo "==> Registry entry already up to date — no PR needed"
+  exit 0
+fi
+
+# Upsert the entry.
+TMP_MANIFEST=$(mktemp)
+if [[ -n "$EXISTING" ]]; then
+  jq --arg n "$NAME" --argjson entry "$ENTRY" \
+    '.plugins = [.plugins[] | if .name == $n then $entry else . end]' \
+    "$REG_MANIFEST" > "$TMP_MANIFEST"
+  COMMIT_MSG="Update $NAME entry to v$VERSION"
+else
+  jq --argjson entry "$ENTRY" '.plugins += [$entry]' "$REG_MANIFEST" > "$TMP_MANIFEST"
+  COMMIT_MSG="Add $NAME to marketplace"
+fi
+mv "$TMP_MANIFEST" "$REG_MANIFEST"
+
+BRANCH="add-${NAME}-v${VERSION}"
+(
+  cd "$REG_TMP"
+  git checkout -b "$BRANCH" >/dev/null 2>&1
+  git add .claude-plugin/marketplace.json
+  git commit -m "$COMMIT_MSG" >/dev/null
+  git push -u origin "$BRANCH" >/dev/null 2>&1
+
+  # If a PR for this branch already exists, skip creation.
+  if gh pr view --repo "$REGISTRY_REPO" "$BRANCH" >/dev/null 2>&1; then
+    echo "==> PR for $BRANCH already open on $REGISTRY_REPO — updated via push"
+  else
+    gh pr create \
+      --repo "$REGISTRY_REPO" \
+      --title "$COMMIT_MSG" \
+      --body "Adds/updates \`$NAME\` (v$VERSION) in the marketplace registry.
+
+- Source: \`github:$SLUG\`
+- Description: $DESCRIPTION
+- Homepage: ${HOMEPAGE:-n/a}
+
+Opened by \`create-claude-plugin/scripts/publish-to-github.sh\`."
+  fi
+)
+echo "==> Registry PR opened/updated on $REGISTRY_REPO"
