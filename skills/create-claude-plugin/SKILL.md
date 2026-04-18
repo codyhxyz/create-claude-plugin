@@ -190,17 +190,26 @@ Common issues: components inside `.claude-plugin/` (move up to root), hook scrip
 
 ### 4b — Claude Cowork
 
-Cowork has no CLI. Claude Code's built-in `computer-use` MCP drives the desktop app end-to-end — installs the plugin, runs your test prompt, screenshots errors. Prereqs: macOS, Pro/Max, Claude Code v2.1.85+.
+Cowork has no CLI. This plugin drives the desktop app end-to-end via a headless `claude -p` subprocess using `@github/computer-use-mcp`. Prereqs: macOS, Pro/Max, Claude Code v2.1.85+, Claude desktop app installed.
 
-One command, then paste into an interactive Claude Code session:
+**One command, one consent gate, unattended after that:**
 
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/check-submission.sh "<plugin-path>" --print-cowork-prompt
+${CLAUDE_PLUGIN_ROOT}/scripts/cowork-smoke-test.sh "<plugin-path>"
 ```
 
-The printed prompt is a **self-driving onboarding script**: it verifies `computer-use` is enabled (walks the user through `/mcp` → toggle ON if not), requests macOS Accessibility + Screen Recording permissions, installs the plugin in Cowork, runs the test prompt, screenshots the result, and — on pass — auto-runs `COWORK_TESTED=yes ./scripts/check-submission.sh` to unlock the submission gate. It stops for explicit user confirmation at each consent boundary.
+The script:
+1. Confirms the plan in one prompt (`Proceed? [y/N]`) listing the MCP it'll install and the subprocess it'll spawn.
+2. First-run only: `claude mcp add computer-use --scope user -- npx -y @github/computer-use-mcp` (~30s).
+3. Spawns `claude -p` with `--permission-mode bypassPermissions --allowedTools "mcp__computer-use__* Bash Read Write"` and feeds it the autonomous prompt at `templates/cowork-autonomous-prompt.md`. That subprocess installs the plugin in Cowork, runs the test prompt from your README's Usage section, and emits `COWORK_TEST_RESULT: PASS` or `FAIL` on stdout.
+4. On PASS: re-runs `check-submission.sh` with `COWORK_TESTED=yes` — gate unlocked, Cowork checkbox free.
+5. On FAIL: prints the subprocess tail and exits non-zero. Claim Code only.
 
-Full protocol + manual fallback for non-macOS / Free users: `reference/cowork-testing.md`.
+**First-run macOS permissions:** Claude.app needs Accessibility + Screen Recording via System Settings → Privacy & Security. macOS won't let any script bypass this; click once and subsequent runs are silent.
+
+**Override the test prompt** with `--test-prompt "..."` if your README doesn't have a paste-ready trigger. **Skip the consent** with `--yes` for CI re-runs.
+
+Full flow + manual fallback for non-macOS / Free users: `reference/cowork-testing.md`. Legacy interactive flow (via `check-submission.sh --print-cowork-prompt`) is still supported for multi-step learners but the one-command path is the default.
 
 ---
 
@@ -329,6 +338,7 @@ Submit at **https://claude.ai/settings/plugins/submit** (or **https://platform.c
 | Sync README badges + install block from `plugin.json` | `${CLAUDE_PLUGIN_ROOT}/scripts/sync-readme.sh "<plugin-path>"` |
 | Record hero GIF (VHS; falls back to SVG wordmark) | `${CLAUDE_PLUGIN_ROOT}/scripts/record-demo.sh "<plugin-path>"` |
 | Pre-flight the submission (model invokes via Bash) | `${CLAUDE_PLUGIN_ROOT}/scripts/check-submission.sh "<plugin-path>"` |
+| Cowork smoke-test (end-to-end automated) | `${CLAUDE_PLUGIN_ROOT}/scripts/cowork-smoke-test.sh "<plugin-path>"` |
 | Submit to official store | https://claude.ai/settings/plugins/submit |
 
 ## Common mistakes

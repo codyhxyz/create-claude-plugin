@@ -349,7 +349,7 @@ echo "  No macOS or no Pro/Max? Manual fallback: Claude desktop → Cowork → C
 if [[ "${COWORK_TESTED:-}" == "yes" ]]; then
   ok "COWORK_TESTED=yes — you've confirmed the smoke-test passed"
 else
-  warn "Cowork smoke-test NOT confirmed. Set COWORK_TESTED=yes after testing, or DO NOT select Cowork in Platforms."
+  warn "Cowork smoke-test NOT confirmed. Run '\${CLAUDE_PLUGIN_ROOT}/scripts/cowork-smoke-test.sh \"$PLUGIN_DIR\"' (one command, ~2-3 min) or set COWORK_TESTED=yes manually after testing, or DO NOT select Cowork in Platforms."
 fi
 
 # ---------- Repo polish (Phase 6) ----------
