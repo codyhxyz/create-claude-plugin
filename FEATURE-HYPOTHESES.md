@@ -9,7 +9,7 @@ This doc doubles as the working task list — update `status` in-place as featur
 | # | Decision | Choice |
 |---|---|---|
 | 1 | Hero asset format | VHS (`charmbracelet/vhs`) → `.gif` primary. Scaffold a `docs/demo.tape`. SVG wordmark only if VHS missing. |
-| 2 | Meta-marketplace | **Yes — live.** Repo: `codyhxyz/claude-plugins` (marketplace name `codyhxyz-plugins`). Users run `/plugin marketplace add codyhxyz/claude-plugins` once, then install any listed plugin. |
+| 2 | Meta-marketplace | **Yes — live.** Repo: `codyhxyz/codyhxyz-plugins` (marketplace name `codyhxyz-plugins`). Users run `/plugin marketplace add codyhxyz/codyhxyz-plugins` once, then install any listed plugin. |
 | 3 | Topic list | Baseline `claude-code`, `claude-code-plugin`, `claude-plugin`. Auto-detect: `skills/` → `claude-skill`, `agents/` → `claude-agent`, `hooks/` → `claude-hook`, `.mcp.json` → `mcp`. Plus manifest `keywords`. |
 | 4 | Badge version source | `img.shields.io/github/package-json/v` against `.claude-plugin/plugin.json`. |
 | 5 | Publish script on re-run | Idempotent. Always `gh repo edit` whether the repo exists or not. |
@@ -33,7 +33,7 @@ Status legend: `todo` · `in-progress` · `shipped` · `deferred` · `dropped`
 
 | ID | Feature | Status | Location | Effort | Notes |
 |---|---|---|---|---|---|
-| B1 | `scripts/publish-to-github.sh` — idempotent `gh repo create` + `gh repo edit` reading `plugin.json` | shipped | `create-claude-plugin/scripts/publish-to-github.sh` | S | Sets description/homepage/topics (baseline + auto-detected + manifest keywords). C2 (tag + release from CHANGELOG) and E2 (auto-PR into `codyhxyz/claude-plugins`) are baked in. Skip either via `CCP_SKIP_RELEASE=1` / `CCP_SKIP_REGISTRY=1`. |
+| B1 | `scripts/publish-to-github.sh` — idempotent `gh repo create` + `gh repo edit` reading `plugin.json` | shipped | `create-claude-plugin/scripts/publish-to-github.sh` | S | Sets description/homepage/topics (baseline + auto-detected + manifest keywords). C2 (tag + release from CHANGELOG) and E2 (auto-PR into `codyhxyz/codyhxyz-plugins`) are baked in. Skip either via `CCP_SKIP_RELEASE=1` / `CCP_SKIP_REGISTRY=1`. |
 | B2 | Badge block in plugin README template | shipped | `create-claude-plugin/skills/create-claude-plugin/templates/plugin/README.md` | S | License/version/Built-for-Claude-Code badges, wrapped in `<!-- auto:start -->` / `<!-- auto:end -->` markers for C1 |
 | B3 | Restructure plugin README template to hyperframes shape | shipped | same as B2 | S | Centered hero → badges → tagline → hero GIF → Quick Start (3 options with meta-marketplace as default) → Try it → Why → How → `<details>` examples → Contributing → License |
 | B4 | `.github/` scaffold — issue forms, PR template, `CONTRIBUTING.md` | shipped | `create-claude-plugin/skills/create-claude-plugin/templates/plugin/.github/` | S | Bug form collects plugin version + `claude --version` + install path; PR template has test-plan checklist; CONTRIBUTING covers the dev loop + release flow |
@@ -59,7 +59,7 @@ Status legend: `todo` · `in-progress` · `shipped` · `deferred` · `dropped`
 
 | ID | Feature | Status | Location | Effort | Notes |
 |---|---|---|---|---|---|
-| E1 | Stand up `codyhxyz/claude-plugins` registry repo | shipped | https://github.com/codyhxyz/claude-plugins | S | Repo created, pushed, topics applied. First entry: `prompt-optimizer` via `{source: github, repo: codyhxyz/prompt-optimizer}`. Marketplace name: `codyhxyz-plugins`. README in hyperframes shape. |
+| E1 | Stand up `codyhxyz/codyhxyz-plugins` registry repo | shipped | https://github.com/codyhxyz/codyhxyz-plugins | S | Repo created, pushed, topics applied. First entry: `prompt-optimizer` via `{source: github, repo: codyhxyz/prompt-optimizer}`. Marketplace name: `codyhxyz-plugins`. README in hyperframes shape. |
 | E2 | Auto-PR entry into registry from `publish-to-github.sh` | shipped | bundled into B1 | M | Clones the registry, upserts an entry in `.claude-plugin/marketplace.json` (source: github), opens a PR via `gh pr create`. Idempotent — skips if the entry is already current. |
 
 ## Hypotheses being tested

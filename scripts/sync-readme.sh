@@ -71,7 +71,7 @@ INSTALL_BLOCK=$(cat <<EOF
 ### Option 1 — install from the codyhxyz-plugins marketplace *(recommended)*
 
 \`\`\`
-/plugin marketplace add codyhxyz/claude-plugins
+/plugin marketplace add codyhxyz/codyhxyz-plugins
 /plugin install ${NAME}@codyhxyz-plugins
 \`\`\`
 

@@ -9,7 +9,7 @@ This doc doubles as the working task list — update `status` in-place as featur
 | # | Decision | Choice |
 |---|---|---|
 | 1 | Hero asset format | VHS (`charmbracelet/vhs`) → `.gif` primary + `.webm` fallback. Scaffold a `docs/demo.tape`. SVG wordmark only if VHS missing. |
-| 2 | Meta-marketplace | **Yes — live.** Repo: `codyhxyz/claude-plugins` (marketplace name `codyhxyz-plugins`). Users run `/plugin marketplace add codyhxyz/claude-plugins` once, then install any listed plugin. |
+| 2 | Meta-marketplace | **Yes — live.** Repo: `codyhxyz/codyhxyz-plugins` (marketplace name `codyhxyz-plugins`). Users run `/plugin marketplace add codyhxyz/codyhxyz-plugins` once, then install any listed plugin. |
 | 3 | Topic list | Baseline `claude-code`, `claude-code-plugin`, `claude-plugin`, `agent`. Auto-detect: `skills/` → `claude-skill`, `agents/` → `claude-agent`, `hooks/` → `claude-hook`, `.mcp.json` → `mcp`. Plus manifest `keywords`. |
 | 4 | Badge version source | `img.shields.io/github/package-json/v` against raw `plugin.json`. |
 | 5 | Publish script on re-run | Idempotent. Always `gh repo edit` whether the repo exists or not. |
@@ -59,7 +59,7 @@ Status legend: `todo` · `in-progress` · `shipped` · `deferred` · `dropped`
 
 | ID | Feature | Status | Location | Effort | Notes |
 |---|---|---|---|---|---|
-| E1 | Stand up `codyhxyz/claude-plugins` registry repo | shipped | https://github.com/codyhxyz/claude-plugins | S | Repo created, pushed, 6 topics applied. First entry: `prompt-optimizer` via `{source: github, repo: codyhxyz/prompt-optimizer}`. marketplace name `codyhxyz-plugins`. README in hyperframes shape. |
+| E1 | Stand up `codyhxyz/codyhxyz-plugins` registry repo | shipped | https://github.com/codyhxyz/codyhxyz-plugins | S | Repo created, pushed, 6 topics applied. First entry: `prompt-optimizer` via `{source: github, repo: codyhxyz/prompt-optimizer}`. marketplace name `codyhxyz-plugins`. README in hyperframes shape. |
 | E2 | Auto-PR entry into registry from `publish-to-github.sh` | todo | extends B1 | M | Each new plugin appends one entry to the registry's `.claude-plugin/marketplace.json` via PR. |
 
 ## Hypotheses being tested

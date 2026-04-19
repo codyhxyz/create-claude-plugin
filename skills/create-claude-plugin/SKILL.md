@@ -289,7 +289,7 @@ The script reads `.claude-plugin/plugin.json` as the single source of truth. In 
 1. Creates the repo (or pushes the current branch if it already exists).
 2. Runs `gh repo edit` to sync description, homepage, and topics. Topics = baseline (`claude-code`, `claude-code-plugin`, `claude-plugin`) + auto-detected from layout (`skills/` → `claude-skill`, `agents/` → `claude-agent`, `hooks/` → `claude-hook`, `.mcp.json` → `mcp`) + manifest `keywords`.
 3. Tags `v<version>` and cuts a GitHub release from the matching `CHANGELOG.md` entry (skip with `CCP_SKIP_RELEASE=1`).
-4. Opens or refreshes a PR against `codyhxyz/claude-plugins` adding this plugin to the meta-marketplace, so users `/plugin marketplace add codyhxyz/claude-plugins` once and install any listed plugin (skip with `CCP_SKIP_REGISTRY=1`; override registry with `CCP_REGISTRY_REPO=owner/repo`).
+4. Opens or refreshes a PR against `codyhxyz/codyhxyz-plugins` adding this plugin to the meta-marketplace, so users `/plugin marketplace add codyhxyz/codyhxyz-plugins` once and install any listed plugin (skip with `CCP_SKIP_REGISTRY=1`; override registry with `CCP_REGISTRY_REPO=owner/repo`).
 
 Once pushed, anyone can install with:
 

@@ -19,10 +19,10 @@
 # tag v<version>, push, cut a GitHub release from the matching CHANGELOG entry.
 #
 # Finally, open (or update) a PR against the meta-marketplace registry
-# (default: codyhxyz/claude-plugins) adding this plugin's entry.
+# (default: codyhxyz/codyhxyz-plugins) adding this plugin's entry.
 #
 # Env:
-#   CCP_REGISTRY_REPO   override registry (default: codyhxyz/claude-plugins)
+#   CCP_REGISTRY_REPO   override registry (default: codyhxyz/codyhxyz-plugins)
 #   CCP_SKIP_REGISTRY=1 skip the registry PR step
 #   CCP_SKIP_RELEASE=1  skip tagging + gh release
 #
@@ -156,7 +156,7 @@ else
 fi
 
 # ---------- Meta-marketplace auto-PR ----------
-REGISTRY_REPO="${CCP_REGISTRY_REPO:-codyhxyz/claude-plugins}"
+REGISTRY_REPO="${CCP_REGISTRY_REPO:-codyhxyz/codyhxyz-plugins}"
 
 if [[ "${CCP_SKIP_REGISTRY:-}" == "1" ]]; then
   echo "==> CCP_SKIP_REGISTRY=1 — skipping registry PR"

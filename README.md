@@ -6,7 +6,7 @@
   <a href="https://claude.com/product/claude-code"><img src="https://img.shields.io/badge/built_for-Claude%20Code-d97706" alt="Built for Claude Code"></a>
 </p>
 
-<p align="center"><img src="assets/og.png" alt="create-claude-plugin" width="760"></p>
+<p align="center"><img src="docs/hero.gif" alt="create-claude-plugin Phase 7 handoff: validate, repo check, Cowork smoke test, clipboard staged, submission form opened" width="900"></p>
 
 > *A Claude plugin that ships Claude plugins. Yes, it's recursive. Someone had to do it.*
 
@@ -24,10 +24,6 @@ After: plugin passes `claude plugin validate`, repo is live on GitHub, `/plugin 
 - A live GitHub repo with topics, a verified install flow, and `gh repo create` already done.
 - A filled-in submission. Clipboard pre-loaded with every field the form asks for, browser opened to `claude.ai/settings/plugins/submit`, fields grouped by form page so you can paste and tab through.
 - An automated Cowork smoke test. Most toolkits stop at `claude plugin validate`. This one drives the Cowork desktop app for you: Claude Code's Computer Use installs your plugin, runs your test prompt, and screenshots errors. No manual clicking. (macOS plus Pro/Max only; there's a manual fallback otherwise.)
-
-## Demo
-
-GIF placeholder. The thing I want to capture is the Phase 7 handoff: skill finishes, clipboard is staged, submission URL opens, every field is grouped and ready to paste. If you want to see it now, run `./scripts/check-submission.sh <plugin-path>` on a submission-ready plugin.
 
 ## Examples
 

@@ -22,7 +22,7 @@ ONE_PARAGRAPH_INTRO — what problem this solves, who it's for, and why it's wor
 ### Option 1 — install from the codyhxyz-plugins marketplace *(recommended)*
 
 ```
-/plugin marketplace add codyhxyz/claude-plugins
+/plugin marketplace add codyhxyz/codyhxyz-plugins
 /plugin install PLUGIN_NAME@codyhxyz-plugins
 ```
 
