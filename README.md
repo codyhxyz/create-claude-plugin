@@ -37,11 +37,11 @@ Example 2. "Build me a plugin from scratch that bundles a skill and a PostToolUs
 ### Claude Code (recommended)
 
 ```
-/plugin marketplace add codyhxyz/create-claude-plugin
-/plugin install create-claude-plugin@create-claude-plugin
+/plugin marketplace add codyhxyz/codyhxyz-plugins
+/plugin install create-claude-plugin@codyhxyz-plugins
 ```
 
-The `plugin@marketplace` format is `<plugin-name>@<marketplace-name>`. For single-plugin repos like this one the two names are identical by convention, which is why it appears twice.
+The `plugin@marketplace` format is `<plugin-name>@<marketplace-name>`. `codyhxyz-plugins` is my meta-marketplace — one `add`, every plugin I ship.
 
 See the full [codyhxyz-plugins marketplace](https://github.com/codyhxyz/codyhxyz-plugins) for my other plugins.
 
