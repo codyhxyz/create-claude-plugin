@@ -4,6 +4,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
   <a href=".claude-plugin/plugin.json"><img src="https://img.shields.io/github/package-json/v/codyhxyz/create-claude-plugin?filename=.claude-plugin%2Fplugin.json&label=version" alt="Version"></a>
   <a href="https://claude.com/product/claude-code"><img src="https://img.shields.io/badge/built_for-Claude%20Code-d97706" alt="Built for Claude Code"></a>
+  <a href="https://github.com/codyhxyz/codyhxyz-plugins"><img src="https://img.shields.io/badge/part_of-codyhxyz--plugins-ffd900?logo=github&logoColor=000" alt="Part of codyhxyz-plugins"></a>
 </p>
 
 <p align="center"><img src="docs/hero.gif" alt="create-claude-plugin Phase 7 handoff: validate, repo check, Cowork smoke test, clipboard staged, submission form opened" width="900"></p>
@@ -41,6 +42,8 @@ Example 2. "Build me a plugin from scratch that bundles a skill and a PostToolUs
 ```
 
 The `plugin@marketplace` format is `<plugin-name>@<marketplace-name>`. For single-plugin repos like this one the two names are identical by convention, which is why it appears twice.
+
+See the full [codyhxyz-plugins marketplace](https://github.com/codyhxyz/codyhxyz-plugins) for my other plugins.
 
 ### Manual install
 
@@ -128,3 +131,7 @@ Issues and PRs welcome. Stale doc links in the skill count as bugs.
 ## License
 
 [MIT](LICENSE) © 2026 Cody Hergenroeder
+
+---
+
+<sub>Part of <a href="https://github.com/codyhxyz/codyhxyz-plugins"><b>codyhxyz-plugins</b></a> 🍋 — my registry of Claude Code plugins.</sub>
