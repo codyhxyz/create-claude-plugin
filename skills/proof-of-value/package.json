@@ -1,0 +1,16 @@
+{
+  "name": "proof-of-value-renderer",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Renderer for the proof-of-value skill. Reads <plugin>/marketing/proof-of-value.config.mjs, fills a kind-specific SVG template, rasterizes to <plugin>/assets/proof-of-value.png. One-time install in the skill dir; reused across all plugins the user builds.",
+  "type": "module",
+  "scripts": {
+    "render": "node scripts/render.mjs"
+  },
+  "dependencies": {
+    "@resvg/resvg-js": "^2.6.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

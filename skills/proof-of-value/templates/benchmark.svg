@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  <rect width="1600" height="900" fill="{{bg}}"/>
+  <rect x="0" y="0" width="14" height="900" fill="{{accent}}"/>
+
+  <text x="80" y="90" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="28" font-weight="600" letter-spacing="1.5" fill="{{accent}}">PROOF · BENCHMARK</text>
+
+  <text x="80" y="160" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="44" font-weight="700" fill="{{fg}}">{{heroLine}}</text>
+  <text x="80" y="210" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="24" font-weight="500" fill="{{muted}}">{{subLine}}</text>
+
+  <rect x="80" y="240" width="1440" height="560" rx="14" ry="14" fill="{{panelBg}}" stroke="{{panelStroke}}" stroke-width="1"/>
+
+  {{{benchmarkRows}}}
+
+  <line x1="80" y1="820" x2="1520" y2="820" stroke="{{muted}}" stroke-opacity="0.18" stroke-width="1"/>
+  <text x="80"   y="860" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="26" font-weight="600" fill="{{fg}}">{{name}}</text>
+  <text x="1520" y="860" font-family="Inter, -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Helvetica, Arial, sans-serif" font-size="22" font-weight="500" fill="{{muted}}" text-anchor="end">{{caption}}</text>
+</svg>

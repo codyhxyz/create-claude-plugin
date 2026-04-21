@@ -1,0 +1,111 @@
+// marketing/proof-of-value.config.mjs — configuration for the proof-of-value skill.
+//
+// One README question, six shapes of answer. Pick ONE kind, fill its fields,
+// then run:
+//   ${CLAUDE_PLUGIN_ROOT}/skills/proof-of-value/scripts/render.sh marketing/proof-of-value.config.mjs
+//
+// Output lands at `assets/proof-of-value.png` (1600×900).
+// check-submission.sh warns until the PLACEHOLDER strings below are replaced.
+//
+// The six kinds — pick the one that best answers
+//   "what does this plugin give the user that they can't already do?"
+//
+//   visual          — before/after screenshots (design / UX plugins)
+//   benchmark       — numeric bars (performance / token / latency plugins)
+//   terminal-diff   — terminal-session before/after (workflow / keystroke-reduction plugins)
+//   output-quality  — raw-LLM vs plugin-guided text (prompt / agent plugins)
+//   coverage        — checklist of things the plugin covers vs misses (scope plugins)
+//   file-tree       — before/after file tree (structural / scaffolding plugins)
+//
+// If you can't pick one cleanly, stop — the plugin's value prop isn't crisp
+// enough to ship yet. That's the whole point of this step.
+
+export default {
+  // Required — one of the six kinds listed above.
+  kind: "KIND_PLACEHOLDER",
+
+  // Plugin name (appears bottom-left of the card).
+  name: "PLUGIN_NAME_PLACEHOLDER",
+
+  // One-line caption used directly in the README, below the image.
+  // ≤ 120 chars. State the delta, not the feature.
+  caption: "CAPTION_PLACEHOLDER",
+
+  // Theme: "light" | "dark". Default "light".
+  theme: "light",
+
+  // Accent color (hex). Matches your og-card if you have one.
+  accent: "#5B7CFA",
+
+  // --------------------------------------------------------------------
+  // Fields below are per-kind. Fill only the block matching `kind` above.
+  // Leave the others as-is or delete; unused fields are ignored.
+  // --------------------------------------------------------------------
+
+  // kind: "visual"
+  // Two image paths (PNG/JPG, relative to this config file). Ideally
+  // both images have the same aspect ratio; they're placed side-by-side.
+  visual: {
+    beforeImage: "./before.png",
+    afterImage:  "./after.png",
+    // Optional overrides for the panel labels.
+    beforeLabel: "Before",
+    afterLabel:  "After",
+  },
+
+  // kind: "benchmark"
+  // Up to 6 rows. `before` and `after` are numbers (any unit — tokens,
+  // ms, MB, $/1k, whatever). `unit` is appended to the numeric labels.
+  // `lowerIsBetter: true` flips the color semantics so green = "after < before".
+  benchmark: {
+    unit: "tokens",
+    lowerIsBetter: true,
+    rows: [
+      // { label: "First render",  before: 12400, after: 3100 },
+      // { label: "Warm request",  before:  8200, after: 1400 },
+      // { label: "Cold start",    before: 18500, after: 9200 },
+    ],
+  },
+
+  // kind: "terminal-diff"
+  // Two blocks of shell text. Keep each block ≤ 12 lines and ≤ 72 chars/line.
+  terminalDiff: {
+    beforeLabel: "Without PLUGIN_NAME",
+    afterLabel:  "With PLUGIN_NAME",
+    before: "$ step one\n$ step two\n$ step three",
+    after:  "$ one command",
+  },
+
+  // kind: "output-quality"
+  // Two blocks of prose — same prompt, different quality. ≤ ~600 chars each.
+  outputQuality: {
+    userPrompt: "Optional — the shared prompt both outputs are responding to.",
+    beforeLabel: "Raw LLM",
+    afterLabel:  "With PLUGIN_NAME",
+    before: "Naive / generic / broken output goes here.",
+    after:  "Plugin-guided output goes here.",
+  },
+
+  // kind: "coverage"
+  // Up to 12 rows. `covered: true` renders a checkmark; false renders an X.
+  // Typically: list the things a stranger wouldn't know to check; mark
+  // which the plugin handles vs which are still on them.
+  coverage: {
+    heading: "What PLUGIN_NAME covers",
+    rows: [
+      // { label: "thing the LLM usually forgets", covered: true },
+      // { label: "edge case most tutorials skip", covered: true },
+      // { label: "another silent failure mode",    covered: true },
+      // { label: "something the user still owns",  covered: false },
+    ],
+  },
+
+  // kind: "file-tree"
+  // Two tree-formatted text blocks. Render monospaced. Keep each ≤ 20 lines.
+  fileTree: {
+    beforeLabel: "Before",
+    afterLabel:  "After",
+    before: "src/\n├── foo.ts\n└── bar.ts",
+    after:  "src/\n├── foo.ts\n├── bar.ts\n└── generated/\n    └── schema.ts",
+  },
+};
