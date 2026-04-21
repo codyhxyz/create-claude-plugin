@@ -37,7 +37,7 @@ Phases 0–7 build and ship a new plugin. Phase 8 is ongoing maintenance — onl
 | 3 | **Build** | Skills/agents/hooks/etc. wired in correct locations |
 | 4 | **Test locally** | `claude --plugin-dir <path>` + `/reload-plugins` + `claude plugin validate .` all green |
 | 5 | **Document** | README with install + usage + examples; CHANGELOG with v0.1.0 |
-| 5.5 | **Draft marketing copy** | Supply-side README (replaces Phase 5 stub) + `MARKETING.md` with launch tweet |
+| 5.5 | **Prove the value** | Supply-side README + `MARKETING.md` + `assets/proof-of-value.png` (one of six kinds) |
 | 6 | **Host & make installable** | Push to GitHub; verify `/plugin marketplace add owner/repo` works |
 | 7 | **Submit to official store** | Run `check-submission.sh`, fill the form |
 | 8 | **Maintenance (ongoing)** | `check-drift.sh` / `sync-plugin.sh` / `rename-plugin.sh` to keep `plugin.json` ↔ marketplace entries ↔ GitHub in sync |
@@ -234,11 +234,16 @@ What you write here is a utilitarian template-fill — it'll pass validation but
 
 ---
 
-## Phase 5.5: Draft marketing copy
+## Phase 5.5: Prove the value
 
-Between documentation and hosting, draft marketing-grade copy. A README that reads as a spec sheet is the single biggest reason good plugins don't land. Run this by default; let the user opt out.
+Between documentation and hosting, make the plugin's value prop *visible*. Two jobs:
 
-**Load `reference/marketing-copy.md` before drafting.** It covers supply-side principles, anti-patterns (no "comprehensive", no "simply", no emoji headers), and the tagline + tweet rubrics. Don't draft without it.
+1. **Draft supply-side copy** — tagline, README, launch tweet. A README that reads as a spec sheet is the single biggest reason good plugins don't land.
+2. **Produce one proof artifact** — an image that answers *"what does this give me that I can't already do?"* in under five seconds. Adjectives don't answer that question; evidence does. Six shapes, authored by the `proof-of-value` sibling skill: visual before/after, benchmark chart, terminal diff, output-quality comparison, coverage checklist, file-tree diff. If the author can't pick a shape cleanly, the plugin's value prop isn't crisp enough to ship.
+
+Run both by default. Let the user opt out of copy polish; don't let them opt out of the proof artifact without acknowledging the trade-off (it's the biggest lift on Twitter / HN).
+
+**Load `reference/marketing-copy.md` before drafting copy.** It covers supply-side principles, anti-patterns (no "comprehensive", no "simply", no emoji headers), and the tagline + tweet rubrics. Don't draft without it.
 
 ### Steps
 
@@ -254,12 +259,13 @@ Between documentation and hosting, draft marketing-grade copy. A README that rea
    - **Why this exists** — the unmet need; what the plugin *won't* do
 3. **Draft a launch tweet** (≤280 chars): hook in first 10 words, one concrete outcome, one link, no hashtag spam, max 1 emoji. Use `@you` as a placeholder for the author handle — don't ask the user for theirs; that's feature creep.
 4. **Optionally draft 2–3 alt tweets** with different hooks.
-5. **Present both via `AskUserQuestion`** with four options:
+5. **Present copy via `AskUserQuestion`** with these options:
    - *"Ship as-is"* — write README to plugin root (overwriting the Phase 5 template-fill), copy `templates/plugin/MARKETING.md` to plugin root and fill in `## Launch tweet` + `## Alt tweets`
    - *"Revise"* — take free-text feedback, regenerate, re-present. Cap at 3 rounds; after the 3rd, ship whatever's current
-   - *"Draft og-card now"* — ship the README + tweet, then **invoke the `og-card` skill** to generate a 1200×630 social-preview PNG at `<plugin>/assets/og.png`. Returns here on completion
-   - *"Skip"* — keep the Phase 5 template-fill README, don't create `MARKETING.md`, continue to Phase 6
+   - *"Draft og-card now"* — invoke the `og-card` skill to generate a 1200×630 social-preview PNG at `<plugin>/assets/og.png`. Returns here on completion
+   - *"Skip copy"* — keep the Phase 5 template-fill README, don't create `MARKETING.md`
 6. **Before writing: grep the draft for banned strings** — `simply`, `easily`, `comprehensive`, `everything you need`, `a suite of`. If any appear, rewrite before presenting to the user.
+7. **Then invoke the `proof-of-value` skill.** This step is not optional by default — it's the artifact that makes the plugin legible to a stranger. The skill interviews the author for which of six kinds fits, produces `<plugin>/assets/proof-of-value.png`, and writes the source-of-truth config to `<plugin>/marketing/proof-of-value.config.mjs`. If the author explicitly declines (e.g. the plugin genuinely has no demo-able surface), note that choice in a comment in `MARKETING.md` so Phase 6 doesn't loop back on it.
 
 ### If a README already exists (update flow or pre-populated)
 
@@ -272,7 +278,7 @@ Don't auto-overwrite. Present the draft **alongside a diff and the reasoning**: 
 - Show HN / Product Hunt / Reddit post drafts — out of scope
 - More than 3 alt tweets
 
-OG-card generation is opt-in via the *"Draft og-card now"* option; it delegates to the `og-card` sibling skill.
+OG-card generation is opt-in via the *"Draft og-card now"* option; it delegates to the `og-card` sibling skill. Proof-of-value generation is the default (step 7 above); it delegates to the `proof-of-value` sibling skill. `check-submission.sh` will flag a missing proof-of-value artifact when the author runs a full pre-flight before submitting.
 
 ---
 
@@ -419,6 +425,7 @@ All three support `--dry-run`. Default to `--dry-run` the first time you run `re
 | `reference/hosting-options.md` | Hosting somewhere other than GitHub |
 | `reference/marketing-copy.md` | Phase 5.5 — drafting supply-side README + launch tweet; anti-pattern list |
 | `../og-card/SKILL.md` | Phase 5.5 option *"Draft og-card now"* — interview + render 1200×630 social-preview PNG |
+| `../proof-of-value/SKILL.md` | Phase 5.5 required step — interview + render a 1600×900 proof-of-value artifact (one of six kinds) to `assets/proof-of-value.png` |
 | `reference/cowork-testing.md` | Phase 4b — manual + Computer Use paths |
 | `reference/submission-form.md` | Submission form fields in detail |
 | `reference/phase7-handoff.md` | Full Phase 7 protocol (AskUserQuestion text, form grouping) |

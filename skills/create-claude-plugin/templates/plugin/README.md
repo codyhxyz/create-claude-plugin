@@ -14,30 +14,37 @@
 </p>
 <!-- auto:end -->
 
-ONE_PARAGRAPH_INTRO — what problem this solves, who it's for, and why it's worth the install. Lead with the user's pain, not the plugin's features.
-
-## Quick Start
-
 <!-- auto:start-install — rewritten by scripts/sync-readme.sh -->
-### Option 1 — install from the codyhxyz-plugins marketplace *(recommended)*
-
 ```
 /plugin marketplace add codyhxyz/codyhxyz-plugins && /plugin install PLUGIN_NAME@codyhxyz-plugins
 ```
+<!-- auto:end-install -->
 
-### Option 2 — install directly from this repo
+<!-- auto:start-proof-of-value — rewritten by scripts/sync-readme.sh from marketing/proof-of-value.config.mjs -->
+<p align="center"><em>(Run the <code>proof-of-value</code> skill to generate an artifact that answers <b>what does this plugin give me that I can't already do?</b>)</em></p>
+<!-- auto:end-proof-of-value -->
+
+ONE_PARAGRAPH_INTRO — what problem this solves, who it's for, and why it's worth the install. Lead with the user's pain, not the plugin's features.
+
+<details>
+<summary>Other install paths</summary>
+
+<br>
+
+**From this repo directly:**
 
 ```
 /plugin marketplace add YOUR_GH_USER/PLUGIN_NAME && /plugin install PLUGIN_NAME@PLUGIN_NAME
 ```
 
-### Option 3 — local smoke test
+**Local smoke test:**
 
 ```bash
 git clone https://github.com/YOUR_GH_USER/PLUGIN_NAME
 claude --plugin-dir ./PLUGIN_NAME
 ```
-<!-- auto:end-install -->
+
+</details>
 
 ## Try it — paste any of these
 
@@ -65,7 +72,9 @@ BRIEF_MECHANISM — one short paragraph. What triggers the plugin, what it reads
 
 <br>
 
-CONCRETE_BEFORE_AFTER — a real user prompt, what the plugin did, and the outcome. Keep it specific enough that a reader can picture themselves in it.
+**User:** "A real prompt or workflow entry point — quoted, in the user's voice."
+**Without PLUGIN_NAME:** What they'd get or have to do on their own — the friction, missing step, or wrong output.
+**With PLUGIN_NAME:** The delta — one line, specific, no adjectives.
 
 </details>
 
@@ -74,13 +83,15 @@ CONCRETE_BEFORE_AFTER — a real user prompt, what the plugin did, and the outco
 
 <br>
 
-ANOTHER_SCENARIO — different enough from Scenario 1 that it widens the reader's sense of what this is good for.
+**User:** "A different prompt, ideally showing a different failure mode than Scenario 1."
+**Without PLUGIN_NAME:** …
+**With PLUGIN_NAME:** …
 
 </details>
 
 ## Contributing
 
-Issues and PRs welcome. See `.github/CONTRIBUTING.md`. If `PLUGIN_NAME` misses a failure mode you keep hitting, file it with a before/after — that's a bug.
+Issues and PRs welcome. See `.github/CONTRIBUTING.md`. If `PLUGIN_NAME` misses a failure mode you keep hitting, file it with the user prompt + expected vs actual — that's a bug.
 
 ## License
 

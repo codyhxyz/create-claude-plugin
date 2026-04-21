@@ -233,11 +233,12 @@ if [[ -f "$README" ]]; then
   fi
 fi
 
-# ---------- Marketing copy (Phase 5.5) ----------
-# Warnings only. README quality + MARKETING.md presence don't block submission,
-# but a spec-sheet README is the biggest reason good plugins don't land — flag
-# obvious regressions so the human can fix before hitting "submit".
-echo "Marketing copy (Phase 5.5):"
+# ---------- Prove the value (Phase 5.5) ----------
+# Most checks here are warnings (a spec-sheet README doesn't block submission,
+# but it's the biggest reason good plugins don't land). The proof-of-value
+# artifact IS a hard gate in full pre-flight — it's what makes the plugin
+# legible to a stranger in under five seconds.
+echo "Prove the value (Phase 5.5):"
 MARKETING="$PLUGIN_DIR/MARKETING.md"
 if [[ -f "$MARKETING" ]]; then
   ok "MARKETING.md present"
@@ -276,6 +277,26 @@ if [[ -f "$OG_PNG" ]]; then
 fi
 if [[ -f "$OG_CONFIG" ]] && grep -q -E 'PLACEHOLDER|YOUR_TAGLINE|YOUR_SUBTITLE|OWNER/REPO' "$OG_CONFIG" 2>/dev/null; then
   warn "marketing/og.config.mjs has unreplaced placeholders — run og-card skill or delete the file"
+fi
+
+# Proof-of-value — required before Phase 6 (Host) in full pre-flight, warned in --status.
+# Answers "what does this plugin give me that I can't already do?" as an artifact, not adjectives.
+# Six kinds: visual, benchmark, terminal-diff, output-quality, coverage, file-tree.
+POV_PNG="$PLUGIN_DIR/assets/proof-of-value.png"
+POV_CONFIG="$PLUGIN_DIR/marketing/proof-of-value.config.mjs"
+if [[ -f "$POV_PNG" ]]; then
+  POV_BYTES=$(wc -c < "$POV_PNG" | tr -d ' ')
+  ok "assets/proof-of-value.png present ($POV_BYTES bytes) — wired into README via sync-readme.sh"
+else
+  POV_MSG="no assets/proof-of-value.png — run the proof-of-value sibling skill (visual / benchmark / terminal-diff / output-quality / coverage / file-tree). If the plugin genuinely has no demo-able surface, note that in MARKETING.md to silence this."
+  if [[ -n "$STATUS_MODE" ]]; then
+    warn "$POV_MSG"
+  else
+    err "$POV_MSG"
+  fi
+fi
+if [[ -f "$POV_CONFIG" ]] && grep -q -E 'KIND_PLACEHOLDER|PLUGIN_NAME_PLACEHOLDER|CAPTION_PLACEHOLDER' "$POV_CONFIG" 2>/dev/null; then
+  warn "marketing/proof-of-value.config.mjs has unreplaced placeholders — edit the kind/name/caption fields, then re-run proof-of-value/scripts/render.sh"
 fi
 
 # ---------- Validation (Claude Code) ----------

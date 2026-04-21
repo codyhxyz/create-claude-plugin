@@ -11,6 +11,11 @@
 
 > *A Claude plugin that ships Claude plugins. Yes, it's recursive. Someone had to do it.*
 
+<p align="center">
+  <img src="assets/proof-of-value.png" alt="create-claude-plugin — proof of value" width="900">
+</p>
+<p align="center"><em>Eight phases, zero skipped — the skill walks each one before letting you hit submit.</em></p>
+
 Other plugin guides explain what plugins are. This one walks you from "I have an idea" to "it's live in `claude-plugins-official`" without leaving Claude Code. It validates, runs the local test loop, does the Cowork portability check, pushes to GitHub, and fills out the submission form. You handle the judgment (naming, scoping, what it should actually say). The skill handles the plumbing.
 
 ## Before and after
