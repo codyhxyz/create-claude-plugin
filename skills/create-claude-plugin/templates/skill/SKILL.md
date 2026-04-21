@@ -1,7 +1,18 @@
 ---
 name: SKILL_NAME
 description: Use when [SPECIFIC_TRIGGERING_CONDITIONS_AND_SYMPTOMS]. Triggers on phrases like [EXAMPLE_PHRASES].
+metadata:
+  internal: true
 ---
+
+<!--
+  This is a scaffold template — not a real skill. `metadata.internal: true`
+  keeps it hidden from the Skills CLI (`npx skills add ... --list`) so
+  downstream users don't see an unfilled "SKILL_NAME" entry alongside real
+  skills. When you copy this template into your own `skills/<name>/SKILL.md`,
+  DELETE the `metadata.internal: true` line.
+-->
+
 
 # Skill Title
 

@@ -83,7 +83,12 @@ SLUG="$OWNER/$NAME"
 
 # ---------- Auto-detect topics ----------
 TOPICS=(claude-code claude-code-plugin claude-plugin)
-[[ -d "$PLUGIN_DIR/skills" ]] && TOPICS+=(claude-skill)
+# `agent-skills` is the cross-agent convention used by anthropics/skills and
+# indexed by skills.sh — add it whenever skills/ is present so the repo shows
+# up via `npx skills add <owner>/<repo>` and gets crawled by the directory.
+if [[ -d "$PLUGIN_DIR/skills" ]]; then
+  TOPICS+=(claude-skill agent-skills)
+fi
 [[ -d "$PLUGIN_DIR/agents" ]] && TOPICS+=(claude-agent)
 [[ -d "$PLUGIN_DIR/hooks"  ]] && TOPICS+=(claude-hook)
 [[ -f "$PLUGIN_DIR/.mcp.json" ]] && TOPICS+=(mcp)
@@ -129,6 +134,29 @@ gh repo edit "$SLUG" "${EDIT_ARGS[@]}"
 
 echo "==> Repo metadata synced: https://github.com/$SLUG"
 echo "    Topics: ${UNIQ_TOPICS[*]}"
+
+# ---------- skills.sh install hint ----------
+# skills.sh is a cross-agent skills directory that auto-indexes public GitHub
+# repos containing SKILL.md files. There is no explicit publish API — a repo
+# appears once skills.sh's crawler picks it up (typically within a few days).
+# If this plugin exposes skills, print the install command so the author can
+# share it and so downstream agents (Cursor, Codex, Gemini, etc.) can consume.
+if [[ -d "$PLUGIN_DIR/skills" ]]; then
+  echo ""
+  echo "==> skills.sh install command (cross-agent):"
+  echo "      npx skills add $SLUG"
+  echo "    Directory listing (appears after crawl): https://skills.sh/$SLUG"
+  # Sanity check: warn if a scaffold template with placeholder 'SKILL_NAME'
+  # would leak into `npx skills add --full-depth` output. Templates should
+  # carry `metadata.internal: true` so they stay hidden from discovery.
+  LEAKS=$(grep -rl '^name: SKILL_NAME' "$PLUGIN_DIR/skills" 2>/dev/null \
+    | xargs -I{} sh -c 'grep -q "internal: true" "{}" || echo "{}"' 2>/dev/null || true)
+  if [[ -n "$LEAKS" ]]; then
+    echo "    WARN: template SKILL.md files without 'metadata.internal: true' detected:" >&2
+    echo "$LEAKS" | sed 's/^/      /' >&2
+    echo "    These will surface as broken 'SKILL_NAME' entries on skills.sh." >&2
+  fi
+fi
 
 # ---------- Tag + release ----------
 if [[ "${CCP_SKIP_RELEASE:-}" == "1" ]]; then
