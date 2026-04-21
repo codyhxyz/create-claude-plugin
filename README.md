@@ -37,8 +37,7 @@ Example 2. "Build me a plugin from scratch that bundles a skill and a PostToolUs
 ### Claude Code (recommended)
 
 ```
-/plugin marketplace add codyhxyz/codyhxyz-plugins
-/plugin install create-claude-plugin@codyhxyz-plugins
+/plugin marketplace add codyhxyz/codyhxyz-plugins && /plugin install create-claude-plugin@codyhxyz-plugins
 ```
 
 The `plugin@marketplace` format is `<plugin-name>@<marketplace-name>`. `codyhxyz-plugins` is my meta-marketplace — one `add`, every plugin I ship.

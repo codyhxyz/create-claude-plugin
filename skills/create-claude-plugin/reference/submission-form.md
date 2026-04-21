@@ -111,8 +111,7 @@ Fix the cited issues, bump your version, and re-submit.
 You don't have to be in the official marketplace. Anyone can install your plugin from your GitHub repo via:
 
 ```
-/plugin marketplace add owner/repo
-/plugin install plugin-name@<marketplace-name>
+/plugin marketplace add owner/repo && /plugin install plugin-name@<marketplace-name>
 ```
 
 Some community plugins live exclusively in self-hosted marketplaces. The official store is for discoverability and one-line install — not a prerequisite to existing.

@@ -71,15 +71,13 @@ INSTALL_BLOCK=$(cat <<EOF
 ### Option 1 — install from the codyhxyz-plugins marketplace *(recommended)*
 
 \`\`\`
-/plugin marketplace add codyhxyz/codyhxyz-plugins
-/plugin install ${NAME}@codyhxyz-plugins
+/plugin marketplace add codyhxyz/codyhxyz-plugins && /plugin install ${NAME}@codyhxyz-plugins
 \`\`\`
 
 ### Option 2 — install directly from this repo
 
 \`\`\`
-/plugin marketplace add ${OWNER}/${REPO}
-/plugin install ${NAME}@${NAME}
+/plugin marketplace add ${OWNER}/${REPO} && /plugin install ${NAME}@${NAME}
 \`\`\`
 
 ### Option 3 — local smoke test

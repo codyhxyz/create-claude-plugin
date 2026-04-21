@@ -13,8 +13,7 @@ Idempotent — safe to re-run. Reads `.claude-plugin/plugin.json` for name/descr
 Users install:
 
 ```
-/plugin marketplace add owner/plugin-name
-/plugin install plugin-name@<marketplace-name>
+/plugin marketplace add owner/plugin-name && /plugin install plugin-name@<marketplace-name>
 ```
 
 `<marketplace-name>` = the `name` field in your `.claude-plugin/marketplace.json`.

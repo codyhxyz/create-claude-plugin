@@ -22,15 +22,13 @@ ONE_PARAGRAPH_INTRO — what problem this solves, who it's for, and why it's wor
 ### Option 1 — install from the codyhxyz-plugins marketplace *(recommended)*
 
 ```
-/plugin marketplace add codyhxyz/codyhxyz-plugins
-/plugin install PLUGIN_NAME@codyhxyz-plugins
+/plugin marketplace add codyhxyz/codyhxyz-plugins && /plugin install PLUGIN_NAME@codyhxyz-plugins
 ```
 
 ### Option 2 — install directly from this repo
 
 ```
-/plugin marketplace add YOUR_GH_USER/PLUGIN_NAME
-/plugin install PLUGIN_NAME@PLUGIN_NAME
+/plugin marketplace add YOUR_GH_USER/PLUGIN_NAME && /plugin install PLUGIN_NAME@PLUGIN_NAME
 ```
 
 ### Option 3 — local smoke test

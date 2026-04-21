@@ -294,8 +294,7 @@ The script reads `.claude-plugin/plugin.json` as the single source of truth. In 
 Once pushed, anyone can install with:
 
 ```
-/plugin marketplace add <owner>/<repo>
-/plugin install <plugin-name>@<marketplace-name>
+/plugin marketplace add <owner>/<repo> && /plugin install <plugin-name>@<marketplace-name>
 ```
 
 Where `<marketplace-name>` is the `name` in your `.claude-plugin/marketplace.json`.
