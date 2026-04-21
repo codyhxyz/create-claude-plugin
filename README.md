@@ -7,8 +7,6 @@
   <a href="https://github.com/codyhxyz/codyhxyz-plugins"><img src="https://img.shields.io/badge/part_of-codyhxyz--plugins-ffd900?logo=github&logoColor=000" alt="Part of codyhxyz-plugins"></a>
 </p>
 
-<p align="center"><img src="docs/hero.gif" alt="create-claude-plugin Phase 7 handoff: validate, repo check, Cowork smoke test, clipboard staged, submission form opened" width="900"></p>
-
 > *A Claude plugin that ships Claude plugins. Yes, it's recursive. Someone had to do it.*
 
 <p align="center">
