@@ -291,6 +291,8 @@ The script reads `.claude-plugin/plugin.json` as the single source of truth. In 
 3. Tags `v<version>` and cuts a GitHub release from the matching `CHANGELOG.md` entry (skip with `CCP_SKIP_RELEASE=1`).
 4. Opens or refreshes a PR against `codyhxyz/codyhxyz-plugins` adding this plugin to the meta-marketplace, so users `/plugin marketplace add codyhxyz/codyhxyz-plugins` once and install any listed plugin (skip with `CCP_SKIP_REGISTRY=1`; override registry with `CCP_REGISTRY_REPO=owner/repo`).
 
+**First-time registry entry vs. ongoing sync.** The publish script only handles the *first-time* registry PR — registering the plugin in `marketplace.json`. After that, the meta-marketplace repo's hourly sync workflow polls each plugin's GitHub API and auto-stamps `last_updated` + `last_sha` with no secrets or setup needed in the plugin repo. No re-running the publish script needed to refresh timestamps.
+
 Once pushed, anyone can install with:
 
 ```

@@ -21,6 +21,13 @@
 # Finally, open (or update) a PR against the meta-marketplace registry
 # (default: codyhxyz/codyhxyz-plugins) adding this plugin's entry.
 #
+# NOTE: this script only handles the *first-time* registry entry. Ongoing
+# sync (last_updated / last_sha stamping on every push) is handled by the
+# scaffolded `.github/workflows/notify-marketplace.yml` in each plugin repo,
+# which fires a `plugin-updated` repository_dispatch at the meta-repo. That
+# workflow needs an org-level `MARKETPLACE_PAT` secret (fine-grained PAT with
+# contents-write on the meta-repo). See SKILL.md Phase 2 / Phase 6.
+#
 # Env:
 #   CCP_REGISTRY_REPO   override registry (default: codyhxyz/codyhxyz-plugins)
 #   CCP_SKIP_REGISTRY=1 skip the registry PR step
