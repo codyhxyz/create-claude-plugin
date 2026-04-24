@@ -12,6 +12,18 @@
 
 set -euo pipefail
 
+# Recursion guard: check-submission.sh below spawns `claude plugin validate`,
+# which itself fires SessionStart and re-enters this script. Without a guard
+# that creates a fork bomb in any plugin-repo cwd — each level spawns another
+# `claude` plus all SessionStart sibling hooks (e.g. audio plugins → afplay),
+# which in tight succession can overflow CoreAudio. Bail on the second level
+# in. The env var inherits across the nested `claude` process so the guard
+# survives the recursion boundary.
+if [[ -n "${CCP_BANNER_GUARD:-}" ]]; then
+  exit 0
+fi
+export CCP_BANNER_GUARD=1
+
 # Exit fast if cwd isn't a plugin. No stderr, no delay.
 if [[ ! -f "$PWD/.claude-plugin/plugin.json" ]]; then
   exit 0

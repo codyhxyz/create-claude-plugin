@@ -66,6 +66,7 @@ LICENSE_FILE="$PLUGIN_DIR/LICENSE"
 ERRORS=0
 WARNINGS=0
 VALIDATE_OK=""
+VALIDATE_SKIPPED=""
 # In --quiet mode (SessionStart banner use case), silence the verbose
 # per-check trace on both stdout and stderr — only the final one-line
 # banner goes to stdout.
@@ -300,7 +301,17 @@ if [[ -f "$POV_CONFIG" ]] && grep -q -E 'KIND_PLACEHOLDER|PLUGIN_NAME_PLACEHOLDE
 fi
 
 # ---------- Validation (Claude Code) ----------
-if command -v claude >/dev/null 2>&1; then
+# Skip the nested `claude plugin validate` when invoked from the SessionStart
+# banner path (--quiet). Banner mode only emits a one-line status — it doesn't
+# surface validator output anyway, and spawning a nested `claude` from inside
+# a SessionStart hook is a fork-bomb hazard (the nested process fires its own
+# SessionStart, which re-runs this script). The recursion guard in
+# session-start-banner.sh handles the loop, but skipping here is cheaper and
+# avoids ~1-5s of nested-claude startup blocking session start.
+if [[ -n "$QUIET_MODE" ]]; then
+  # banner mode: skip validator entirely (see comment above)
+  VALIDATE_SKIPPED="1"
+elif command -v claude >/dev/null 2>&1; then
   echo "claude plugin validate (Claude Code):"
   VALIDATE_OUT=$(mktemp -t ccp-validate.XXXXXX)
   if (cd "$PLUGIN_DIR" && claude plugin validate .) >"$VALIDATE_OUT" 2>&1; then
@@ -308,7 +319,7 @@ if command -v claude >/dev/null 2>&1; then
     VALIDATE_OK="1"
   else
     err "fails — validator output below:"
-    [[ -z "$QUIET_MODE" ]] && sed 's/^/      /' "$VALIDATE_OUT" >&2
+    sed 's/^/      /' "$VALIDATE_OUT" >&2
   fi
   rm -f "$VALIDATE_OUT"
 else
@@ -465,6 +476,11 @@ if [[ -n "$STATUS_MODE" ]]; then
 
   if [[ -n "$VALIDATE_OK" ]]; then
     PHASE4_STATUS="⚠"; PHASE4_NOTE="validate passed (runtime test status unknown — confirm with --plugin-dir)"
+  elif [[ -n "$VALIDATE_SKIPPED" ]]; then
+    # Banner/quiet mode skips the nested `claude plugin validate` to avoid
+    # spawning a child claude from inside SessionStart. Don't surface this as
+    # a hard ✗ — re-run without --quiet for the real validator status.
+    PHASE4_STATUS="⚠"; PHASE4_NOTE="validate skipped in banner mode — run without --quiet for status"
   else
     PHASE4_STATUS="✗"; PHASE4_NOTE="claude plugin validate did not pass"
   fi
