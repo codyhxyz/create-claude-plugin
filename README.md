@@ -28,6 +28,11 @@ After: plugin passes `claude plugin validate`, repo is live on GitHub, `/plugin 
 - A live GitHub repo with topics, a verified install flow, and `gh repo create` already done.
 - A filled-in submission. Clipboard pre-loaded with every field the form asks for, browser opened to `claude.ai/settings/plugins/submit`, fields grouped by form page so you can paste and tab through.
 - An automated Cowork smoke test. Most toolkits stop at `claude plugin validate`. This one drives the Cowork desktop app for you: Claude Code's Computer Use installs your plugin, runs your test prompt, and screenshots errors. No manual clicking. (macOS plus Pro/Max only; there's a manual fallback otherwise.)
+- A generic repo-health check (linting, type checking, tests, pre-commit, security, docs) via `scripts/readiness.sh` — runs as a Phase 4.5 advisory scoring 20 criteria across 6 categories, with `scripts/readiness-fix.sh` available to scaffold missing configs (prettier/eslint/ruff/pre-commit/jest/pytest/`.env.example`/issue templates).
+
+### Two-layer validation
+
+This plugin ships two orthogonal checks. **Layer 1 — generic repo health** (`scripts/readiness.sh`) scores any codebase on hygiene basics: linter config, formatter, type checking, tests, coverage, pre-commit hooks, `.gitignore`, `CODEOWNERS`, issue/PR templates. Non-blocking; advisory. **Layer 2 — marketplace-specific** (`scripts/check-submission.sh`) validates the 17 rules Anthropic's submission form enforces: manifest schema, naming, marketplace.json integrity, Cowork portability, marketing artifacts. Blocking. Run them together: readiness catches hygiene gaps; check-submission catches submission blockers. `check-submission.sh` also reports the readiness score as an informational line.
 
 ## Examples
 

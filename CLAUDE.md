@@ -14,6 +14,12 @@ Everything below applies to edits made anywhere in this tree.
 - Component dirs (`skills/`, `hooks/`) live at the **plugin root**. Only `plugin.json` and `marketplace.json` live in `.claude-plugin/`.
 - The one script that matters is `scripts/check-submission.sh`. Any new script must be pure shell, single-purpose, idempotent, and useful from outside this repo — see `ARCHITECTURE.md` § "Why `check-submission.sh` is the only script".
 
+## Two-layer validation architecture
+
+- **Layer 1 (generic repo health):** `scripts/readiness.sh` + `scripts/readiness-fix.sh`. Ported from `github.com/parcadei/ContinuousClaudeV4.7` (MIT) with Category 7 (tldr) removed. Scores 20 criteria / 6 categories: lint, formatter, types, pre-commit, tests, coverage, docs, security, task discovery. Advisory only — **never blocks**. Wired as Phase 4.5 in the skill.
+- **Layer 2 (marketplace-specific):** `scripts/check-submission.sh`. 17 submission-form rules (manifest, naming, marketplace.json, Cowork portability, marketing artifacts). Blocking in classic mode.
+- The two are orthogonal by design: readiness doesn't know about plugins, check-submission doesn't know about linters. Don't merge them. `check-submission.sh` shells out to `readiness.sh` once to emit the score as informational output, and that's the only coupling.
+
 ## Path rules
 
 - Hook commands in `hooks/hooks.json` must use `${CLAUDE_PLUGIN_ROOT}/...`. Never absolute paths, never `..` traversal.

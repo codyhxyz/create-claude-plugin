@@ -412,6 +412,18 @@ if [[ "$OFFLINE" != "--offline" ]] && command -v gh >/dev/null 2>&1 && [[ -n "$R
   fi
 fi
 
+# ---------- Readiness advisory (Layer 1, non-gating) ----------
+# Generic repo-health score from scripts/readiness.sh. Informational only —
+# does not affect $ERRORS. See Phase 4.5 in the skill for the full flow.
+READINESS_SCRIPT="$(dirname "$0")/readiness.sh"
+if [[ -x "$READINESS_SCRIPT" ]] && command -v python3 >/dev/null 2>&1; then
+  echo "Readiness (Layer 1, informational):"
+  READINESS_JSON=$(bash "$READINESS_SCRIPT" "$PLUGIN_DIR" 2>/dev/null || true)
+  READINESS_RATE=$(echo "$READINESS_JSON" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('passRate','?'))" 2>/dev/null || echo "?")
+  READINESS_LEVEL=$(echo "$READINESS_JSON" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('level','?'))" 2>/dev/null || echo "?")
+  ok "readiness: ${READINESS_RATE}% (level ${READINESS_LEVEL}/5) — run scripts/readiness.sh for details, scripts/readiness-fix.sh to autofix"
+fi
+
 # ---------- Summary ----------
 echo
 echo "==> Summary: $ERRORS error(s), $WARNINGS warning(s)"

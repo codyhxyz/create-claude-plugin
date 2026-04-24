@@ -214,6 +214,21 @@ Full flow + manual fallback for non-macOS / Free users: `reference/cowork-testin
 
 ---
 
+## Phase 4.5: Readiness advisory (generic repo health)
+
+After components are wired and before you write docs, run the generic Layer 1 repo-health check. This is orthogonal to `check-submission.sh` (which is marketplace-specific): readiness.sh scores 20 criteria across linting, type checking, formatting, tests, coverage, security, and docs. Plugins can pass marketplace validation while failing basic hygiene — this is the gate for that.
+
+```bash
+bash ${CLAUDE_PLUGIN_ROOT}/scripts/readiness.sh "<plugin-path>"
+```
+
+JSON goes to stdout (`.passRate`, `.level`, `.report.*`); human summary to stderr. **Parse `.passRate`:**
+
+- **≥ 70%:** mention the score, proceed to Phase 5.
+- **< 70%:** print the failing categories + offer to run `bash ${CLAUDE_PLUGIN_ROOT}/scripts/readiness-fix.sh "<plugin-path>"` (scaffolds prettier, eslint, ruff, pre-commit, jest/pytest, `.env.example`, issue templates, etc.). If the user declines, proceed anyway — **this phase is advisory, not blocking.**
+
+---
+
 ## Phase 5: Document
 
 The README is the primary install/usage doc. Use `templates/plugin/README.md` and fill in:
