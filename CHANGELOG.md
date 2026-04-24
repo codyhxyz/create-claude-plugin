@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] — 2026-04-24
+
+### Fixed
+- **SessionStart fork bomb in plugin-source dirs.** `session-start-banner.sh` invoked `check-submission.sh`, which spawned a nested `claude plugin validate .` to populate Phase 4 status. The nested `claude` fired its own `SessionStart`, re-entering the banner script and recursing — each level also fanned out to sibling SessionStart hooks (e.g. audio plugins → `afplay`), which in tight succession could overflow CoreAudio. Two-layer fix: (a) `session-start-banner.sh` now exports a `CCP_BANNER_GUARD=1` env var and bails on re-entry, (b) `check-submission.sh` skips the nested `claude plugin validate` entirely when `--quiet` is set (banner mode), since banner output never surfaces validator detail anyway. Phase 4 now reports `⚠ validate skipped in banner mode` instead of a false `✗`. Re-run without `--quiet` to get real validator status.
+
 ## [0.4.0] — 2026-04-17
 
 ### Added
