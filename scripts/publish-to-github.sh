@@ -21,11 +21,10 @@
 # Finally, open (or update) a PR against the meta-marketplace registry
 # (default: codyhxyz/codyhxyz-plugins) adding this plugin's entry.
 #
-# NOTE: this script only handles the *first-time* registry entry. Ongoing
-# sync (last_updated / last_sha stamping) is handled by an hourly poll
-# workflow in the meta-marketplace repo, which hits each plugin's GitHub API
-# and updates the registry — no secrets or workflow needed in plugin repos.
-# See SKILL.md Phase 6.
+# NOTE: this script only handles the *first-time* registry entry. There is
+# no ongoing sync — marketplace.json tracks identity (name, repo, description,
+# keywords), not activity. /plugin install reads each plugin's own repo at
+# install time, and GitHub already exposes last-push time on the repo page.
 #
 # Env:
 #   CCP_REGISTRY_REPO   override registry (default: codyhxyz/codyhxyz-plugins)
