@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **`og-card --video`** renders `assets/og.mp4` next to `og.png`: a 4 s silent H.264 loop (High, yuv420p, BT.709, faststart) for `og:video` on hosted pages. Plays inline in iMessage, Discord and Telegram; everything else shows the PNG poster. The animation is periodic and equals the static card at phase 0, so `og.png` is frame 0 and the loop has no cut; the renderer refuses a clip that doesn't return to frame 0 or exceeds 2.5 MB. The static PNG is pixel-identical to before.
+- `check-submission.sh` reports `assets/og.mp4` when present.
+- Verified with Apple's LinkPresentation framework (what Messages uses): the clip is picked up from hosts that answer `Range` with 206 (Vercel, Netlify, R2 behind a Worker) and dropped from Cloudflare Pages and Workers static assets, which return 200. The skill now says so.
+
 ## [0.4.1] — 2026-04-24
 
 ### Fixed

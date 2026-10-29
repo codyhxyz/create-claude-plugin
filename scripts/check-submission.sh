@@ -276,6 +276,11 @@ if [[ -f "$OG_PNG" ]]; then
   OG_BYTES=$(wc -c < "$OG_PNG" | tr -d ' ')
   ok "assets/og.png present ($OG_BYTES bytes) — upload to GitHub → repo Settings → Social preview"
 fi
+OG_MP4="$PLUGIN_DIR/assets/og.mp4"
+if [[ -f "$OG_MP4" ]]; then
+  OG_MP4_BYTES=$(wc -c < "$OG_MP4" | tr -d ' ')
+  ok "assets/og.mp4 present ($OG_MP4_BYTES bytes) — og:video for a hosted page only; GitHub's social preview takes the PNG"
+fi
 if [[ -f "$OG_CONFIG" ]] && grep -q -E 'PLACEHOLDER|YOUR_TAGLINE|YOUR_SUBTITLE|OWNER/REPO' "$OG_CONFIG" 2>/dev/null; then
   warn "marketing/og.config.mjs has unreplaced placeholders — run og-card skill or delete the file"
 fi

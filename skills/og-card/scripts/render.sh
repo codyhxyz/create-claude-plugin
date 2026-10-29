@@ -3,14 +3,15 @@
 # `npm install @resvg/resvg-js` in the skill directory, then runs the
 # renderer. Subsequent invocations skip the install step.
 #
-# usage: render.sh <path/to/og.config.mjs>
+# usage: render.sh <path/to/og.config.mjs> [--video]
+#        --video also writes assets/og.mp4 (needs ffmpeg on PATH)
 
 set -euo pipefail
 
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
 if [[ $# -lt 1 ]]; then
-  echo "usage: $(basename "$0") <path/to/og.config.mjs>" >&2
+  echo "usage: $(basename "$0") <path/to/og.config.mjs> [--video]" >&2
   exit 2
 fi
 

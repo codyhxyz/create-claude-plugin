@@ -1,6 +1,6 @@
 ---
 name: og-card
-description: Use when generating an Open Graph social-preview image (1200×630 PNG) for a Claude Code plugin repo, so link unfurls in Twitter / Slack / iMessage / LinkedIn / GitHub's social-preview slot render as a branded card instead of a grey placeholder. Invoked from Phase 5.5 of the `create-claude-plugin` skill when the user picks "Draft og-card now", or directly when the user says "make an og image", "og card", "social preview image", or "link unfurl card". Mirrors the Chrome Web Store `cws-screens` skill's shape: interview → typed config → render → PNG.
+description: Use when generating an Open Graph social-preview image (1200×630 PNG), and optionally a looping og:video MP4 for a hosted landing page, for a Claude Code plugin repo, so link unfurls in Twitter / Slack / iMessage / LinkedIn / GitHub's social-preview slot render as a branded card instead of a grey placeholder. Invoked from Phase 5.5 of the `create-claude-plugin` skill when the user picks "Draft og-card now", or directly when the user says "make an og image", "og card", "social preview image", "link unfurl card", "og video", or "video link preview". Mirrors the Chrome Web Store `cws-screens` skill's shape: interview → typed config → render → PNG.
 ---
 
 # og-card — generate a 1200×630 social-preview image
@@ -60,6 +60,34 @@ ${CLAUDE_PLUGIN_ROOT}/skills/og-card/scripts/render.sh <plugin-path>/marketing/o
 - Writes `<plugin-path>/assets/og.png` (1200×630, ~50–120 KB depending on theme).
 - Errors with a clear message on any `*_PLACEHOLDER` string.
 
+## Video variant (hosted pages only)
+
+```bash
+${CLAUDE_PLUGIN_ROOT}/skills/og-card/scripts/render.sh <plugin-path>/marketing/og.config.mjs --video
+```
+
+Writes `assets/og.png` **and** `assets/og.mp4`: a 4 s silent H.264 loop (≈30–70 KB) where the glow drifts and a highlight travels the accent bar and divider. Every animated value is periodic and equals the static card at the start, so `og.png` is frame 0. Use it as the poster and the clip loops with no cut. The renderer refuses to write a clip that doesn't return to frame 0 or is over 2.5 MB. Requires `ffmpeg` on PATH. Loop length is `video: { seconds, fps }` in the config.
+
+**Only offer this when the plugin has a page whose HTML the author controls** (a landing page, docs site, GitHub Pages). GitHub writes the meta tags for repo URLs and its social-preview slot takes an image only, so a repo link can never play video.
+
+Where it plays: iMessage (inline, muted, looped), Discord and Telegram. X, Slack, LinkedIn, WhatsApp and Bluesky ignore `og:video` and show the `og:image` poster, so the PNG must stand on its own.
+
+Tags for the page. Put every URL tag before the type and size tags, since Open Graph attaches those to the video tag before them. Don't add `twitter:player`; it makes X worse for a raw MP4.
+
+```html
+<meta property="og:image" content="https://SITE/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:video" content="https://SITE/og.mp4">
+<meta property="og:video:secure_url" content="https://SITE/og.mp4">
+<meta property="og:video:type" content="video/mp4">
+<meta property="og:video:width" content="1200">
+<meta property="og:video:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+```
+
+The host must answer `Range` requests with `206`, or Messages drops the video and shows the PNG. Vercel and Netlify do. **Cloudflare Pages and Workers static assets don't**: they return 200, and Messages ignores the clip. On Cloudflare, serve the MP4 from R2 through a Worker that handles Range. Check after deploying: `curl -s -o /dev/null -w '%{http_code}\n' -H 'Range: bytes=0-1' https://SITE/og.mp4` must print `206`. If the `launch-public-site` skill is installed, its `seo-doctor` checks this plus tag order, faststart, codec and the 10 MB total preview budget, and its `templates/live-preview/` covers previews that show live data at share time.
+
 ## Present the result
 
 After rendering, show the user the generated PNG (Read the file, or describe the layout) and offer:
@@ -67,6 +95,7 @@ After rendering, show the user the generated PNG (Read the file, or describe the
 - *"Ship it"* — keep as-is, return to Phase 5.5
 - *"Tweak copy"* — edit `og.config.mjs` fields, re-render. Cap at 3 rounds
 - *"Try dark theme"* / *"Try light theme"* — flip `theme` field, re-render
+- *"Add looping video"* — only if the plugin has a hosted page (see *Video variant*); re-render with `--video`
 - *"Discard"* — delete `assets/og.png` and `marketing/og.config.mjs`, return to Phase 5.5
 
 ## Wire the PNG into the repo
@@ -75,7 +104,8 @@ After the user ships, make sure the card is discoverable:
 
 1. **README hero slot** — insert `<p align="center"><img src="assets/og.png" alt="<plugin-name>" width="760"></p>` near the top of `README.md`, under the tagline. Only do this if the README doesn't already have a hero image.
 2. **GitHub social-preview slot** — tell the user (don't try to automate): "Upload `assets/og.png` at `https://github.com/<owner>/<repo>/settings` → *Social preview* → *Edit*. GitHub's API doesn't expose this; it's manual one-time setup per repo."
-3. **`MARKETING.md`** — remove the `<!-- TODO: og-card -->` block from `MARKETING.md` and replace with a one-line reference: `Social preview: assets/og.png (1200×630). Upload to GitHub repo settings → Social preview.`
+3. **Hosted page, if `og.mp4` was rendered** — copy `assets/og.png` and `assets/og.mp4` to the page's public root and add the tags from *Video variant*.
+4. **`MARKETING.md`** — remove the `<!-- TODO: og-card -->` block from `MARKETING.md` and replace with a one-line reference: `Social preview: assets/og.png (1200×630). Upload to GitHub repo settings → Social preview.`
 
 ## Common issues
 
@@ -85,13 +115,16 @@ After the user ships, make sure the card is discoverable:
 | Text clips off the right edge | Tagline line > 32 chars, or subtitle > ~90 chars. Shorten, or split across both tagline lines. |
 | `render.sh: first-run setup...` hangs | Network issue. Test with `npm ping` inside the skill dir. Don't run in a sandbox without network on first invocation. |
 | Dark theme accent invisible | Accent color is too close to `#0B1020` (the bg). Pick a more saturated hue. |
+| `--video needs ffmpeg on PATH` | `brew install ffmpeg` (macOS) or `apt install ffmpeg`. Only video needs it; the PNG renders without. |
+| Video plays in Discord but not iMessage | The host isn't answering `Range` with `206` (Cloudflare Pages and Workers static assets don't). See *Video variant*. |
 | `render.mjs: still contains placeholder` | A `*_PLACEHOLDER` string wasn't replaced in `og.config.mjs`. Fix the specific field the error names. |
 
 ## What this skill does NOT do
 
 - **Demo GIFs** — the `create-claude-plugin` plugin template already scaffolds a VHS tape at `docs/demo.tape`; that flow is separate.
 - **Product Hunt / Hunt banners** — different aspect ratio; future work.
-- **Animated / video cards** — SVG-to-PNG only.
+- **Video in GitHub's social-preview slot or on repo links** — GitHub takes an image only. `--video` is for pages the author hosts.
+- **Live-data previews** — the clip is rendered once from the config. A preview that's current when shared needs a scheduled renderer and a server that rewrites the tags (`launch-public-site`'s `templates/live-preview/`, if installed).
 - **Custom templates** — v1 ships two themes (`light`, `dark`). Custom designs are future work.
 - **Upload to GitHub social-preview slot** — GitHub has no API for this. Tell the user where to click.
 
@@ -107,7 +140,7 @@ skills/og-card/
 │   └── og.config.mjs.tmpl            # typed config template for the user's plugin
 └── scripts/
     ├── render.sh                     # shell wrapper — handles first-run install
-    └── render.mjs                    # SVG template fill + resvg rasterize
+    └── render.mjs                    # SVG template fill + resvg rasterize (+ ffmpeg for --video)
 ```
 
 Files this skill writes into the **user's** plugin:
@@ -117,5 +150,6 @@ Files this skill writes into the **user's** plugin:
 ├── marketing/
 │   └── og.config.mjs                 # the filled-in config (source of truth)
 └── assets/
-    └── og.png                        # the rasterized card (committed to git)
+    ├── og.png                        # the rasterized card (committed to git)
+    └── og.mp4                        # --video only: looping og:video, og.png is its frame 0
 ```
