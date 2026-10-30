@@ -1,7 +1,7 @@
 # create-claude-plugin
 
 <p align="center">
-  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="License"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-blue.svg" alt="License"></a>
   <a href=".claude-plugin/plugin.json"><img src="https://img.shields.io/github/package-json/v/codyhxyz/create-claude-plugin?filename=.claude-plugin%2Fplugin.json&label=version" alt="Version"></a>
   <a href="https://claude.com/product/claude-code"><img src="https://img.shields.io/badge/built_for-Claude%20Code-d97706" alt="Built for Claude Code"></a>
   <a href="https://github.com/codyhxyz/codyhxyz-plugins"><img src="https://img.shields.io/badge/part_of-codyhxyz--plugins-ffd900?logo=github&logoColor=000" alt="Part of codyhxyz-plugins"></a>
@@ -137,7 +137,7 @@ Issues and PRs welcome. Stale doc links in the skill count as bugs.
 
 ## License
 
-[MIT](LICENSE) © 2026 Cody Hergenroeder
+[AGPL-3.0](LICENSE) © 2026 Cody Hergenroeder
 
 ---
 
