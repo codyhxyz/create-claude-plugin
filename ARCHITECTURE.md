@@ -30,6 +30,7 @@ Two corollaries:
 | Field presence (name, description, repo URL, examples in README) | `scripts/check-submission.sh` | Boolean checks belong in code |
 | Name availability against `claude-plugins-official` | `scripts/check-submission.sh` (online check) | Network call; the model can't predict |
 | Reserved-name / brand-impersonation check | `scripts/check-submission.sh` | Static list; deterministic |
+| Listing-copy residue (`Lorem ipsum`, `TODO`, "debug build") in descriptions + README prose | `scripts/check-submission.sh` | Word-bounded pattern match; deterministic |
 | Picking *which* components to use | Skill | Judgment; depends on user goal |
 | Writing a good description / examples | Skill | Synthesis; this is what the model is for |
 | Translating CLI errors → "here's what to fix" | Skill | Recipe per error class |

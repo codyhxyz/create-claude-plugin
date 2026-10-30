@@ -299,11 +299,14 @@ OG-card generation is opt-in via the *"Draft og-card now"* option; it delegates 
 
 ## Phase 6: Host & make installable
 
-Push to GitHub using the helper script (idempotent — safe to re-run on updates):
+Push to GitHub using the helper script (idempotent — safe to re-run on updates). It writes to GitHub, so preview it first with `--dry-run`, which runs only the reads and prints every `gh` / `git` write it would make:
 
 ```bash
-${CLAUDE_PLUGIN_ROOT}/scripts/publish-to-github.sh "<plugin-path>"
+${CLAUDE_PLUGIN_ROOT}/scripts/publish-to-github.sh "<plugin-path>" --dry-run   # read-only preview
+${CLAUDE_PLUGIN_ROOT}/scripts/publish-to-github.sh "<plugin-path>"             # mutates GitHub
 ```
+
+If a `gh` call fails, the script checks githubstatus.com and says whether GitHub has an open incident, so you know whether to retry or to fix auth/permissions.
 
 The script reads `.claude-plugin/plugin.json` as the single source of truth. In one idempotent pass it:
 
@@ -339,6 +342,7 @@ The submission form is a human step — no public API. But everything up to clic
    ${CLAUDE_PLUGIN_ROOT}/scripts/check-submission.sh "<plugin-path>"
    ```
    On macOS with 0 errors, the script stages the clipboard + opens the form tab.
+   It also lints the store-facing copy (plugin.json and marketplace.json descriptions, README prose outside code): template residue (`Lorem ipsum`, uppercase `TODO` / `TBD` / `FIXME`) and test wording ("debug build", "for testing purposes") warn; "coming soon" / "public beta" / "pre-release" are info only. Fix the warnings rather than submitting around them; pass `--strict` to make them errors (CI).
 2. **Confirm with `AskUserQuestion`**, not free text. Single yes/no: *"Ready to submit `<plugin-name>`?"* Options: `Yes — opening form now` / `No — I'll do it later`. Ask once.
 3. **On "Yes", present paste-ready fields grouped by form page** using the script's Page 2 / Page 3 groupings verbatim. Don't reorder.
 4. **Platforms field — never claim Cowork** unless `COWORK_TESTED=yes` was set before running the script.
@@ -379,7 +383,7 @@ ${CLAUDE_PLUGIN_ROOT}/scripts/sync-plugin.sh <plugin-dir> [--marketplace <extern
 ${CLAUDE_PLUGIN_ROOT}/scripts/rename-plugin.sh <plugin-dir> <new-name> [--rename-gh-repo] [--dry-run]
 ```
 
-All three support `--dry-run`. Default to `--dry-run` the first time you run `rename-plugin.sh` in a session so the user can review the plan before identity changes hit GitHub.
+All three support `--dry-run` (`check-drift.sh` is read-only anyway). Default to `--dry-run` the first time you run `rename-plugin.sh`, `sync-plugin.sh` or `publish-to-github.sh` in a session so the user can review the plan before changes hit GitHub.
 
 **Don't hand-edit marketplace entries to match plugin.json** — use `sync-plugin.sh`. **Don't `sed` a rename** — use `rename-plugin.sh`. These scripts exist because manual propagation is exactly where drift enters, and slug cascades (directory → URL → gh remote → marketplace source.repo) are easy to do wrong by hand.
 
@@ -387,22 +391,24 @@ All three support `--dry-run`. Default to `--dry-run` the first time you run `re
 
 ## Quick reference
 
-| Task | Command |
-|---|---|
-| Test locally | `claude --plugin-dir ./my-plugin` |
-| Reload after edit | `/reload-plugins` (inside Claude Code) |
-| Validate | `claude plugin validate .` |
-| Install from a local marketplace | `/plugin marketplace add ./my-plugin` |
-| Install from GitHub | `/plugin marketplace add owner/repo` |
-| Publish to GitHub (idempotent) | `${CLAUDE_PLUGIN_ROOT}/scripts/publish-to-github.sh "<plugin-path>"` |
-| Sync README badges + install block from `plugin.json` | `${CLAUDE_PLUGIN_ROOT}/scripts/sync-readme.sh "<plugin-path>"` |
-| Record hero GIF (VHS; falls back to SVG wordmark) | `${CLAUDE_PLUGIN_ROOT}/scripts/record-demo.sh "<plugin-path>"` |
-| Pre-flight the submission (model invokes via Bash) | `${CLAUDE_PLUGIN_ROOT}/scripts/check-submission.sh "<plugin-path>"` |
-| Cowork smoke-test (end-to-end automated) | `${CLAUDE_PLUGIN_ROOT}/scripts/cowork-smoke-test.sh "<plugin-path>"` |
-| Diagnose drift across marketplace ↔ plugin.json ↔ GitHub | `${CLAUDE_PLUGIN_ROOT}/scripts/check-drift.sh "<marketplace-dir-or-json>"` |
-| Propagate plugin.json edits → marketplace entries + gh repo | `${CLAUDE_PLUGIN_ROOT}/scripts/sync-plugin.sh "<plugin-path>"` |
-| Rename a plugin (directory + manifests + gh repo) | `${CLAUDE_PLUGIN_ROOT}/scripts/rename-plugin.sh "<plugin-path>" <new-name> [--rename-gh-repo]` |
-| Submit to official store | https://claude.ai/settings/plugins/submit |
+**Mutates** says what a command changes: *remote* = GitHub or another shared service (confirm with the user, or run `--dry-run` first), *local* = files in the plugin dir, *no* = read-only.
+
+| Task | Command | Mutates |
+|---|---|---|
+| Test locally | `claude --plugin-dir ./my-plugin` | no |
+| Reload after edit | `/reload-plugins` (inside Claude Code) | no |
+| Validate | `claude plugin validate .` | no |
+| Install from a local marketplace | `/plugin marketplace add ./my-plugin` | local (your Claude config) |
+| Install from GitHub | `/plugin marketplace add owner/repo` | local (your Claude config) |
+| Publish to GitHub (idempotent) | `${CLAUDE_PLUGIN_ROOT}/scripts/publish-to-github.sh "<plugin-path>" [--dry-run]` | **remote**: repo, topics, tag, release, registry PR (no with `--dry-run`) |
+| Sync README badges + install block from `plugin.json` | `${CLAUDE_PLUGIN_ROOT}/scripts/sync-readme.sh "<plugin-path>"` | local |
+| Record hero GIF (VHS; falls back to SVG wordmark) | `${CLAUDE_PLUGIN_ROOT}/scripts/record-demo.sh "<plugin-path>"` | local |
+| Pre-flight the submission (model invokes via Bash) | `${CLAUDE_PLUGIN_ROOT}/scripts/check-submission.sh "<plugin-path>" [--strict]` | no (opens the form + clipboard on macOS unless `--no-open`) |
+| Cowork smoke-test (end-to-end automated) | `${CLAUDE_PLUGIN_ROOT}/scripts/cowork-smoke-test.sh "<plugin-path>"` | yes: installs the plugin into your Cowork |
+| Diagnose drift across marketplace ↔ plugin.json ↔ GitHub | `${CLAUDE_PLUGIN_ROOT}/scripts/check-drift.sh "<marketplace-dir-or-json>"` | no |
+| Propagate plugin.json edits → marketplace entries + gh repo | `${CLAUDE_PLUGIN_ROOT}/scripts/sync-plugin.sh "<plugin-path>" [--dry-run]` | **remote** (`gh repo edit`) + local (no with `--dry-run`) |
+| Rename a plugin (directory + manifests + gh repo) | `${CLAUDE_PLUGIN_ROOT}/scripts/rename-plugin.sh "<plugin-path>" <new-name> [--rename-gh-repo] [--dry-run]` | local; **remote** with `--rename-gh-repo` (no with `--dry-run`) |
+| Submit to official store | https://claude.ai/settings/plugins/submit | **remote** (human clicks Submit) |
 
 ## Common mistakes
 

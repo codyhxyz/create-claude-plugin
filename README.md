@@ -32,7 +32,7 @@ After: plugin passes `claude plugin validate`, repo is live on GitHub, `/plugin 
 
 ### Two-layer validation
 
-This plugin ships two orthogonal checks. **Layer 1 — generic repo health** (`scripts/readiness.sh`) scores any codebase on hygiene basics: linter config, formatter, type checking, tests, coverage, pre-commit hooks, `.gitignore`, `CODEOWNERS`, issue/PR templates. Non-blocking; advisory. **Layer 2 — marketplace-specific** (`scripts/check-submission.sh`) validates the 17 rules Anthropic's submission form enforces: manifest schema, naming, marketplace.json integrity, Cowork portability, marketing artifacts. Blocking. Run them together: readiness catches hygiene gaps; check-submission catches submission blockers. `check-submission.sh` also reports the readiness score as an informational line.
+This plugin ships two orthogonal checks. **Layer 1 — generic repo health** (`scripts/readiness.sh`) scores any codebase on hygiene basics: linter config, formatter, type checking, tests, coverage, pre-commit hooks, `.gitignore`, `CODEOWNERS`, issue/PR templates. Non-blocking; advisory. **Layer 2 — marketplace-specific** (`scripts/check-submission.sh`) validates the 18 rules Anthropic's submission form enforces: manifest schema, naming, marketplace.json integrity, listing copy (no `Lorem ipsum`, `TODO` or test wording in descriptions and README prose), Cowork portability, marketing artifacts. Blocking. Run them together: readiness catches hygiene gaps; check-submission catches submission blockers. `check-submission.sh` also reports the readiness score as an informational line.
 
 ## Examples
 

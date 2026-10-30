@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] — 2026-10-29
+
+### Added
+- **Listing-copy lint in `check-submission.sh`.** The plugin.json description, marketplace.json descriptions and README prose are checked for template residue (`Lorem ipsum` in any case; `TODO`, `TBD`, `FIXME` in uppercase only) and test wording ("debug build", "for testing purposes"), which warn, and for unfinished-feature wording ("coming soon", "public beta", "pre-release"), which is info only. Each finding names the field (with the README line), the matched text and the fix. Matching is word-bounded, and README fenced code blocks, inline code and HTML comments are skipped. Ported from the content checks in `asc validate`.
+- **`check-submission.sh --strict`** turns the listing-copy warnings into errors for CI. Without it, the classic invocation behaves as before.
+- **`publish-to-github.sh --dry-run`** (or `CCP_DRY_RUN=1`) runs only the reads (auth, repo, tag and release lookups, a throwaway registry clone) and prints every `gh` and `git` write it would make, including the registry entry it would PR.
+- When a `publish-to-github.sh` command fails, it checks the githubstatus.com status API and says whether GitHub has an open incident or the failure is local.
+- The skill's quick reference has a **Mutates** column (no / local / remote) so an agent knows which commands to confirm or dry-run first.
+
 ## [0.5.0] — 2026-10-29
 
 ### Added

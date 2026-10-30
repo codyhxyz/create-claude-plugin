@@ -2,7 +2,7 @@
 # check-submission.sh — pre-flight a Claude Code plugin for the official store,
 # OR report phase-grouped status mid-development with --status.
 #
-# Usage:  ./check-submission.sh <plugin-dir> [--offline] [--no-open] [--print-cowork-prompt] [--status [--quiet]]
+# Usage:  ./check-submission.sh <plugin-dir> [--offline] [--no-open] [--strict] [--print-cowork-prompt] [--status [--quiet]]
 #
 # Reads <plugin-dir>/.claude-plugin/plugin.json + README, verifies every
 # field the submission form requires is present + well-formed, and prints
@@ -19,6 +19,12 @@
 # the 7 phases of the create-claude-plugin skill. Use mid-development to answer
 # "what's left before I can submit?". Add --quiet to collapse the report to a
 # one-line banner suitable for SessionStart hooks.
+#
+# Listing copy: plugin.json, marketplace.json and README prose are linted for
+# template residue (Lorem ipsum, TODO/TBD/FIXME) and test wording ("debug
+# build", "for testing purposes"); these are warnings. Unfinished-feature
+# wording ("coming soon", "public beta", "pre-release") is info only. Pass
+# --strict to turn the listing-copy warnings into errors.
 
 set -euo pipefail
 
@@ -30,6 +36,7 @@ PRINT_COWORK_PROMPT=""
 NO_OPEN="${CCP_NO_OPEN:-}"
 STATUS_MODE=""
 QUIET_MODE=""
+STRICT=""
 for arg in "$@"; do
   case "$arg" in
     --offline)              OFFLINE="--offline" ;;
@@ -37,13 +44,14 @@ for arg in "$@"; do
     --no-open)              NO_OPEN="1" ;;
     --status)               STATUS_MODE="1"; NO_OPEN="1" ;;
     --quiet)                QUIET_MODE="1" ;;
-    --help|-h)              echo "Usage: $0 <plugin-dir> [--offline] [--no-open] [--print-cowork-prompt] [--status [--quiet]]"; exit 0 ;;
+    --strict)               STRICT="1" ;;
+    --help|-h)              echo "Usage: $0 <plugin-dir> [--offline] [--no-open] [--strict] [--print-cowork-prompt] [--status [--quiet]]"; exit 0 ;;
     *)                      [[ -z "$PLUGIN_DIR" ]] && PLUGIN_DIR="$arg" ;;
   esac
 done
 
 if [[ -z "$PLUGIN_DIR" ]]; then
-  echo "Usage: $0 <plugin-dir> [--offline] [--no-open] [--print-cowork-prompt] [--status [--quiet]]" >&2
+  echo "Usage: $0 <plugin-dir> [--offline] [--no-open] [--strict] [--print-cowork-prompt] [--status [--quiet]]" >&2
   exit 2
 fi
 if [[ -n "$QUIET_MODE" && -z "$STATUS_MODE" ]]; then
@@ -74,11 +82,14 @@ if [[ -n "$QUIET_MODE" ]]; then
   err()  { ERRORS=$((ERRORS+1)); }
   warn() { WARNINGS=$((WARNINGS+1)); }
   ok()   { :; }
+  info() { :; }
   echo() { :; }
 else
   err()  { command echo "  ✗ $*" >&2; ERRORS=$((ERRORS+1)); }
   warn() { command echo "  ! $*" >&2; WARNINGS=$((WARNINGS+1)); }
   ok()   { command echo "  ✓ $*"; }
+  # Informational: never counted, never blocks (not even with --strict).
+  info() { command echo "  i $*"; }
 fi
 
 echo "==> Checking $PLUGIN_DIR"
@@ -233,6 +244,80 @@ if [[ -f "$README" ]]; then
     err "README is missing a '## Examples' or '## Example use cases' section"
   fi
 fi
+
+# ---------- Listing copy ----------
+# The description fields and README are what a reviewer and every installer
+# read. Catch copy that slipped in from development: template residue and
+# test wording warn (errors with --strict); unfinished-feature wording is
+# info, since a roadmap line can be deliberate. Matching is word-bounded,
+# TODO/TBD/FIXME match only in uppercase, and README fenced code blocks,
+# inline code spans and HTML comments are skipped, so documenting a marker
+# (`TODO`) doesn't trip it. Other-platform mentions are not checked: naming
+# Cursor or Codex is normal for a cross-agent skill, not store spam.
+echo "Listing copy:"
+copy_warn() { if [[ -n "$STRICT" ]]; then err "$@"; else warn "$@"; fi; }
+
+# README prose with line numbers preserved: code and comments become blank.
+readme_prose() {
+  awk '
+    {
+      line = $0
+      if (match(line, /^ ? ? ?(```|~~~)/)) {
+        marker = substr(line, RSTART + RLENGTH - 3, 3)
+        if (fence == "") fence = marker; else if (marker == fence) fence = ""
+        print ""; next
+      }
+      if (fence != "") { print ""; next }
+      if (incomment) {
+        e = index(line, "-->")
+        if (e == 0) { print ""; next }
+        line = substr(line, e + 3); incomment = 0
+      }
+      while ((s = index(line, "<!--")) > 0) {
+        e = index(substr(line, s + 4), "-->")
+        if (e == 0) { line = substr(line, 1, s - 1); incomment = 1; break }
+        line = substr(line, 1, s - 1) substr(line, s + e + 6)
+      }
+      gsub(/`[^`]*`/, "", line)
+      print line
+    }' "$1"
+}
+
+# lint_copy <label> <text>. Labels ending in .md get :<line> appended.
+COPY_FINDINGS=0
+lint_copy() {
+  local label="$1" text="$2" kind flags pattern hit where match
+  [[ -z "$text" ]] && return 0
+  while IFS='|' read -r kind flags pattern; do
+    while IFS= read -r hit; do
+      [[ -z "$hit" ]] && continue
+      match="${hit#*:}"
+      where="$label"; [[ "$label" == *.md ]] && where="$label:${hit%%:*}"
+      COPY_FINDINGS=$((COPY_FINDINGS+1))
+      case "$kind" in
+        residue)    copy_warn "$where: template residue \"$match\" — replace it with the real copy or delete it" ;;
+        test)       copy_warn "$where: test wording \"$match\" — listing copy describes the shipped plugin; drop it" ;;
+        unfinished) info "$where: unfinished-feature wording \"$match\" — fine if deliberate; readers take it as a promise" ;;
+      esac
+    done < <(printf '%s\n' "$text" | grep -n -o -w $flags -E -e "$pattern" 2>/dev/null || true)
+  done <<'RULES'
+residue|-i|lorem ipsum
+residue||TODO|TBD|FIXME
+test|-i|debug build|for testing purposes
+unfinished|-i|coming soon|public beta|pre-?release
+RULES
+}
+
+[[ -f "$MANIFEST" ]] && lint_copy "plugin.json description" "$DESCRIPTION"
+if [[ -f "$MARKETPLACE" ]] && jq empty "$MARKETPLACE" >/dev/null 2>&1; then
+  lint_copy "marketplace.json description" "$(jq -r '.description // empty' "$MARKETPLACE")"
+  lint_copy "marketplace.json metadata.description" "$(jq -r '.metadata.description // empty' "$MARKETPLACE")"
+  while IFS=$'\t' read -r mp_entry mp_desc; do
+    lint_copy "marketplace.json plugins[$mp_entry].description" "$mp_desc"
+  done < <(jq -r '.plugins[]? | [(.name // "?"), ((.description // "") | gsub("[\t\n]"; " "))] | @tsv' "$MARKETPLACE" 2>/dev/null || true)
+fi
+[[ -f "$README" ]] && lint_copy "README.md" "$(readme_prose "$README")"
+[[ "$COPY_FINDINGS" -eq 0 ]] && ok "no template residue or test wording in descriptions or README prose"
 
 # ---------- Prove the value (Phase 5.5) ----------
 # Most checks here are warnings (a spec-sheet README doesn't block submission,

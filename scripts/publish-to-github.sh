@@ -1,7 +1,11 @@
 #!/usr/bin/env bash
 # publish-to-github.sh — idempotent GitHub repo create + edit for a Claude plugin
 #
-# Usage:  ./publish-to-github.sh <plugin-dir> [--owner <gh-owner>] [--private]
+# Usage:  ./publish-to-github.sh <plugin-dir> [--owner <gh-owner>] [--private] [--dry-run]
+#
+# --dry-run (or CCP_DRY_RUN=1) makes no changes on GitHub or in git: it runs
+# only the reads (auth, repo/tag/release lookups, a throwaway registry clone)
+# and prints every write it would have made.
 #
 # Reads <plugin-dir>/.claude-plugin/plugin.json for name, description,
 # homepage, and version. Auto-detects topics:
@@ -30,6 +34,10 @@
 #   CCP_REGISTRY_REPO   override registry (default: codyhxyz/codyhxyz-plugins)
 #   CCP_SKIP_REGISTRY=1 skip the registry PR step
 #   CCP_SKIP_RELEASE=1  skip tagging + gh release
+#   CCP_DRY_RUN=1       same as --dry-run
+#
+# On failure, the script checks githubstatus.com and says whether GitHub has
+# an open incident, so a gh 5xx or timeout isn't misread as an auth problem.
 #
 # Prereqs: gh (authenticated), jq, git.
 
@@ -38,17 +46,46 @@ set -euo pipefail
 PLUGIN_DIR=""
 OWNER=""
 VISIBILITY="--public"
+DRY_RUN="${CCP_DRY_RUN:-}"
+[[ "$DRY_RUN" == "0" ]] && DRY_RUN=""
 
 usage() {
-  echo "Usage: $0 <plugin-dir> [--owner <gh-owner>] [--private]" >&2
+  echo "Usage: $0 <plugin-dir> [--owner <gh-owner>] [--private] [--dry-run]" >&2
   exit 2
 }
+
+# mutate <dir> <cmd...>: run cmd in dir, or print it under --dry-run.
+# Every write to GitHub or git goes through here; reads call gh/git directly.
+mutate() {
+  local dir="$1"; shift
+  if [[ -n "$DRY_RUN" ]]; then
+    printf '    [dry-run] would run in %s:' "$dir"; printf ' %q' "$@"; printf '\n'
+    return 0
+  fi
+  (cd "$dir" && "$@")
+}
+
+# When a command fails, say whether GitHub itself is having an incident.
+github_status_hint() {
+  command -v curl >/dev/null 2>&1 || return 0
+  local s
+  s=$(curl -fsS --max-time 5 https://www.githubstatus.com/api/v2/status.json 2>/dev/null \
+    | jq -r '.status | "\(.indicator)\t\(.description)"' 2>/dev/null) || return 0
+  [[ -z "$s" ]] && return 0
+  if [[ "${s%%$'\t'*}" == "none" ]]; then
+    echo "    githubstatus.com: ${s#*$'\t'}. The failure is on this side (auth, permissions, or input)." >&2
+  else
+    echo "    githubstatus.com: ${s#*$'\t'}. GitHub has an open incident; retry once https://www.githubstatus.com clears." >&2
+  fi
+}
+trap github_status_hint ERR
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --owner)   OWNER="${2:-}"; shift 2 ;;
     --private) VISIBILITY="--private"; shift ;;
     --public)  VISIBILITY="--public"; shift ;;
+    --dry-run) DRY_RUN=1; shift ;;
     --help|-h) usage ;;
     *)         [[ -z "$PLUGIN_DIR" ]] && PLUGIN_DIR="$1"; shift ;;
   esac
@@ -78,6 +115,7 @@ if [[ -z "$OWNER" ]]; then
   [[ -z "$OWNER" ]] && { echo "ERROR: gh not authenticated (run 'gh auth login')" >&2; exit 1; }
 fi
 SLUG="$OWNER/$NAME"
+[[ -n "$DRY_RUN" ]] && echo "==> DRY RUN for $SLUG: reads only, nothing is created, pushed, tagged or opened"
 
 # ---------- Auto-detect topics ----------
 TOPICS=(claude-code claude-code-plugin claude-plugin)
@@ -110,7 +148,11 @@ done
 # ---------- Ensure a git repo + initial commit ----------
 if [[ ! -d "$PLUGIN_DIR/.git" ]]; then
   echo "==> Initializing git repo in $PLUGIN_DIR"
-  (cd "$PLUGIN_DIR" && git init -q && git add -A && git commit -q -m "Initial commit" || true)
+  if [[ -n "$DRY_RUN" ]]; then
+    echo "    [dry-run] would run in $PLUGIN_DIR: git init && git add -A && git commit -m 'Initial commit'"
+  else
+    (cd "$PLUGIN_DIR" && git init -q && git add -A && git commit -q -m "Initial commit" || true)
+  fi
 fi
 
 # ---------- Create repo (idempotent) ----------
@@ -118,9 +160,9 @@ if gh repo view "$SLUG" >/dev/null 2>&1; then
   echo "==> Repo $SLUG already exists on GitHub — skipping create"
 else
   echo "==> Creating $SLUG on GitHub"
-  (cd "$PLUGIN_DIR" && gh repo create "$SLUG" $VISIBILITY \
+  mutate "$PLUGIN_DIR" gh repo create "$SLUG" "$VISIBILITY" \
     --source=. --remote=origin --push \
-    --description "$DESCRIPTION")
+    --description "$DESCRIPTION"
 fi
 
 # ---------- Always edit (idempotent sync of description/homepage/topics) ----------
@@ -128,9 +170,9 @@ echo "==> Syncing repo metadata on $SLUG"
 EDIT_ARGS=(--description "$DESCRIPTION")
 [[ -n "$HOMEPAGE" ]] && EDIT_ARGS+=(--homepage "$HOMEPAGE")
 for t in "${UNIQ_TOPICS[@]}"; do EDIT_ARGS+=(--add-topic "$t"); done
-gh repo edit "$SLUG" "${EDIT_ARGS[@]}"
+mutate . gh repo edit "$SLUG" "${EDIT_ARGS[@]}"
 
-echo "==> Repo metadata synced: https://github.com/$SLUG"
+[[ -z "$DRY_RUN" ]] && echo "==> Repo metadata synced: https://github.com/$SLUG"
 echo "    Topics: ${UNIQ_TOPICS[*]}"
 
 # ---------- skills.sh install hint ----------
@@ -177,13 +219,14 @@ else
     fi
     [[ -z "$NOTES" ]] && NOTES="Release $TAG"
 
-    (cd "$PLUGIN_DIR" && git tag -a "$TAG" -m "$TAG" && git push origin "$TAG")
+    mutate "$PLUGIN_DIR" git tag -a "$TAG" -m "$TAG"
+    mutate "$PLUGIN_DIR" git push origin "$TAG"
 
     if gh release view "$TAG" --repo "$SLUG" >/dev/null 2>&1; then
       echo "==> Release $TAG already exists on $SLUG — skipping gh release create"
     else
-      gh release create "$TAG" --repo "$SLUG" --title "$TAG" --notes "$NOTES"
-      echo "==> Cut release $TAG on $SLUG"
+      mutate . gh release create "$TAG" --repo "$SLUG" --title "$TAG" --notes "$NOTES"
+      [[ -z "$DRY_RUN" ]] && echo "==> Cut release $TAG on $SLUG"
     fi
   fi
 fi
@@ -251,6 +294,12 @@ fi
 mv "$TMP_MANIFEST" "$REG_MANIFEST"
 
 BRANCH="add-${NAME}-v${VERSION}"
+if [[ -n "$DRY_RUN" ]]; then
+  echo "    [dry-run] would push branch $BRANCH to $REGISTRY_REPO and open PR \"$COMMIT_MSG\" with entry:"
+  echo "$ENTRY" | sed 's/^/      /'
+  echo "==> Dry run complete: nothing was changed on GitHub or in git"
+  exit 0
+fi
 (
   cd "$REG_TMP"
   git checkout -b "$BRANCH" >/dev/null 2>&1
